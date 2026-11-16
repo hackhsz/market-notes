@@ -1,0 +1,524 @@
+<title>Games Deep Dive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: same system as the rest of Market Notes; one ~800px column in five parts (how games make money, GTA VI, Roblox, consoles, the rest), sector-3 magenta as the identifying color. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #151820;
+  --muted: #586070;
+  --line: #dde1e8;
+  --accent: #2b47cf;
+  --accent-soft: #e8ecfb;
+  --sc: #a82a66;          /* sector 3 magenta */
+  --sc-soft: #f9e8f0;
+  --sc-mid: #f0c9dc;
+  --down: #b83a2c;
+  --up: #17783f;
+  --right-bg: #e4f4ea;
+  --wrong-bg: #fbe7e4;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+    --accent: #93a6ff; --accent-soft: #1c2340;
+    --sc: #f27ab4; --sc-soft: #351a28; --sc-mid: #52243b;
+    --down: #f58a7d; --up: #5fd98f; --right-bg: #143222; --wrong-bg: #3a1c19;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+  --accent: #93a6ff; --accent-soft: #1c2340;
+  --sc: #f27ab4; --sc-soft: #351a28; --sc-mid: #52243b;
+  --down: #f58a7d; --up: #5fd98f; --right-bg: #143222; --wrong-bg: #3a1c19;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.wrap {
+  max-width: 800px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+  display: flex; flex-direction: column; gap: 56px;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 6vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.5rem, 4.2vw, 2rem); font-weight: 800; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.tk { font-family: var(--font-mono); font-weight: 600; font-size: 0.86em; white-space: nowrap; }
+.src { font-size: 0.82rem; color: var(--muted); }
+.src a { color: var(--muted); }
+.dn { color: var(--down); font-weight: 600; font-variant-numeric: tabular-nums; }
+.up { color: var(--up); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+header.intro { display: flex; flex-direction: column; gap: 16px; }
+.tag { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sc); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sc); flex: none; }
+.lede { font-size: 1.12rem; }
+nav.parts { display: flex; flex-wrap: wrap; gap: 8px; }
+nav.parts a { text-decoration: none; color: var(--fg); font-weight: 600; font-size: 0.9rem; padding: 7px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+nav.parts a span { font-family: var(--font-mono); color: var(--sc); margin-right: 6px; }
+nav.parts a:hover { border-color: var(--muted); }
+
+.part-head { display: flex; flex-direction: column; gap: 8px; padding-top: 28px; border-top: 3px solid var(--sc); }
+.part-head .eyebrow { color: var(--sc); font-weight: 600; }
+section { display: flex; flex-direction: column; gap: 18px; scroll-margin-top: 16px; }
+.block { display: flex; flex-direction: column; gap: 14px; }
+.prose { display: flex; flex-direction: column; gap: 12px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+
+.short { list-style: none; margin: 0; padding: 0; display: grid; }
+.short li { padding: 14px 0 14px 30px; border-top: 1px solid var(--line); position: relative; }
+.short li:first-child { border-top: 0; padding-top: 0; }
+.short li::before { content: ""; position: absolute; left: 4px; top: 22px; width: 12px; height: 2px; background: var(--sc); }
+.short li:first-child::before { top: 8px; }
+
+/* models */
+.models { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.model { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.model .lab { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--sc); }
+.model strong { font-family: var(--font-display); font-size: 1.02rem; }
+.model p { font-size: 0.88rem; color: var(--muted); }
+
+/* bar chart */
+.chart { display: flex; flex-direction: column; gap: 12px; }
+.chart-title { display: flex; flex-direction: column; gap: 2px; }
+.chart-title h3 { font-size: 1rem; }
+.bars { display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--muted); }
+.bar-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 84px; align-items: center; gap: 10px; padding: 7px 0; }
+.bar-label { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.85rem; font-weight: 600; color: var(--fg); pointer-events: none; white-space: nowrap; }
+.bar-track { height: 28px; display: flex; align-items: center; }
+.bar { height: 100%; background: var(--sc-soft); border-right: 4px solid var(--sc); border-radius: 0 4px 4px 0; min-width: 4px; }
+.bar.forecast { background: repeating-linear-gradient(135deg, var(--sc-soft) 0 6px, var(--surface) 6px 10px); border-right-style: dashed; }
+.bar-val { font-family: var(--font-mono); font-weight: 600; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.tip { position: absolute; left: 10px; bottom: calc(100% - 4px); z-index: 2; background: var(--fg); color: var(--bg); font-size: 0.78rem; padding: 6px 9px; border-radius: 6px; white-space: nowrap; max-width: calc(100vw - 48px); overflow: hidden; text-overflow: ellipsis; opacity: 0; transform: translateY(4px); transition: opacity 0.12s, transform 0.12s; pointer-events: none; }
+.bar-row:hover .tip, .bar-row:focus-visible .tip { opacity: 1; transform: none; }
+.bar-row:hover .bar:not(.forecast), .bar-row:focus-visible .bar:not(.forecast) { background: var(--sc-mid); }
+.chart-note { font-size: 0.82rem; color: var(--muted); }
+
+/* stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tile .lab { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.tile .val { font-family: var(--font-display); font-weight: 800; font-size: 1.45rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile p { font-size: 0.82rem; color: var(--muted); }
+
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 0.92rem; }
+th, td { text-align: left; padding: 10px 14px; vertical-align: top; border-top: 1px solid var(--line); }
+thead th { border-top: 0; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+td.k { font-weight: 600; white-space: nowrap; }
+td.t { width: 1%; white-space: nowrap; color: var(--sc); }
+
+.news { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.news li { padding: 12px 0 12px 18px; border-top: 1px solid var(--line); position: relative; }
+.news li:first-child { border-top: 0; padding-top: 0; }
+.news li::before { content: ""; position: absolute; left: 2px; top: 21px; width: 7px; height: 7px; border-radius: 50%; background: var(--sc); }
+.news li:first-child::before { top: 9px; }
+.news li p { font-size: 0.95rem; }
+.news .src { display: block; margin-top: 3px; }
+
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; display: flex; flex-direction: column; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+.steps li:first-child { border-top: 0; padding-top: 0; }
+.steps li::before { content: counter(step); font-family: var(--font-mono); font-weight: 600; font-size: 0.9rem; color: var(--sc); width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--sc); display: grid; place-items: center; }
+.steps p { font-size: 0.95rem; }
+
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.two .panel { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.two ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; font-size: 0.92rem; }
+.two h3 { font-size: 0.95rem; }
+
+.terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin: 0; }
+.terms div { padding: 12px 0; border-top: 1px solid var(--line); min-width: 0; }
+.terms dt { font-weight: 600; }
+.terms dd { margin: 2px 0 0; color: var(--muted); font-size: 0.92rem; }
+
+.callout { border-left: 3px solid var(--sc); padding: 4px 0 4px 14px; font-size: 0.95rem; }
+
+.watch { display: grid; }
+.watch-row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.watch-row:first-child { border-top: 0; padding-top: 0; }
+.watch-row:last-child { padding-bottom: 0; }
+.when { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; color: var(--sc); padding-top: 2px; }
+.watch-row p { font-size: 0.95rem; }
+
+.quiz { display: flex; flex-direction: column; gap: 14px; }
+.score { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.score strong { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.reset { font: 600 0.82rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.q-text { font-weight: 600; }
+.opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.opts button { text-align: left; font: 500 0.9rem/1.4 var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; min-width: 0; }
+.opts button:hover:not(:disabled) { border-color: var(--sc); }
+.opts button:disabled { cursor: default; }
+.opts button.right { background: var(--right-bg); border-color: var(--up); }
+.opts button.wrong { background: var(--wrong-bg); border-color: var(--down); }
+.opts button.right::after { content: "  ✓ correct"; color: var(--up); font-weight: 600; font-size: 0.8rem; }
+.opts button.wrong::after { content: "  ✗ your pick"; color: var(--down); font-weight: 600; font-size: 0.8rem; }
+.explain { font-size: 0.92rem; color: var(--muted); border-left: 2px solid var(--sc); padding-left: 12px; }
+
+.prompts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.prompts li { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 10px 10px 16px; }
+.prompts .prompt-text { flex: 1; min-width: 0; font-size: 0.93rem; }
+.prompts button { flex: none; font: 600 0.8rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+
+footer { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; }
+footer p { max-width: 75ch; }
+
+@media (max-width: 600px) {
+  .wrap { padding-block: 28px 48px; gap: 44px; }
+  .models, .terms, .two, .opts { grid-template-columns: minmax(0, 1fr); }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .watch-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .panel { padding: 16px; }
+}
+@media (max-width: 360px) { .tiles { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } html { scroll-behavior: auto; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+
+<header class="intro">
+  <span class="tag"><span class="dot"></span>Sector 3 · Deep dive · as of Nov 16, 2026</span>
+  <h1>Games, one layer deeper</h1>
+  <p class="lede">How game companies turn players into revenue, what Take-Two is betting on GTA VI, why Roblox lost half its value, and how the memory shortage is pushing up console prices.</p>
+  <nav class="parts" aria-label="Parts">
+    <a href="#money"><span>A</span>How games make money</a>
+    <a href="#gta"><span>B</span>GTA VI &amp; Take-Two</a>
+    <a href="#roblox"><span>C</span>Roblox</a>
+    <a href="#consoles"><span>D</span>Consoles</a>
+    <a href="#rest"><span>E</span>The rest</a>
+  </nav>
+</header>
+
+<section>
+  <div class="block"><span class="eyebrow">If you only read one part</span><h2>The short version</h2></div>
+  <ul class="short">
+    <li><strong>Games is a roughly $214 billion market, and phones are more than half of it.</strong> Consoles and PCs split the rest.</li>
+    <li><strong>GTA VI launches Thursday at $79.99.</strong> Take-Two expects holiday-quarter bookings of $3.35–3.50B, about double last quarter. Analysts expect anywhere from 35 to 70 million copies in the first year.</li>
+    <li><strong>Roblox is down about half in a year.</strong> Mandatory age checks made the platform safer but cut chat, sign-ups and spending. Bookings are falling 10–15% a year.</li>
+    <li><strong>Consoles are getting pricier, not cheaper.</strong> The AI-driven memory shortage from sector 2 pushed the Switch 2 to $499.99, and Sony calls memory costs its main risk for next year.</li>
+  </ul>
+</section>
+
+<!-- ================= PART A ================= -->
+<section id="money">
+  <div class="part-head"><span class="eyebrow">Part A</span><h2>How games make money</h2></div>
+
+  <div class="panel chart">
+    <div class="chart-title">
+      <h3>The global games market in 2026</h3>
+      <span class="src">Newzoo estimate, US dollars. Total about $213.9B, up 6.1%.</span>
+    </div>
+    <div class="bars" role="list">
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="Mobile, 121.1 billion dollars, 57 percent">
+        <div class="bar-track"><div class="bar" style="width:93.2%"></div></div><span class="bar-val">$121.1B</span>
+        <span class="bar-label">Mobile · 57%</span>
+        <span class="tip">Mostly free-to-play with in-game purchases</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="Console, 46.9 billion dollars">
+        <div class="bar-track"><div class="bar" style="width:36.1%"></div></div><span class="bar-val">$46.9B</span>
+        <span class="bar-label">Console · 22%</span>
+        <span class="tip">Newzoo says it would shrink this year without GTA VI</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="PC, 45.9 billion dollars">
+        <div class="bar-track"><div class="bar" style="width:35.3%"></div></div><span class="bar-val">$45.9B</span>
+        <span class="bar-label">PC · 21%</span>
+        <span class="tip">Includes Steam, Epic and Chinese PC games</span>
+      </div>
+    </div>
+    <p class="src"><a href="https://wccftech.com/newzoo-2026-global-games-market-report-gta-6-interview/">Wccftech on Newzoo's 2026 report</a></p>
+  </div>
+
+  <div class="models">
+    <div class="model"><span class="lab">Pay once</span><strong>Premium games</strong><p>Buy the game up front. Big releases are moving from $70 to $80: GTA VI and Mario Kart World are both $79.99.</p></div>
+    <div class="model"><span class="lab">Pay inside</span><strong>Free-to-play</strong><p>Free to download, paid through skins, passes and currencies like Robux. Most mobile money comes this way.</p></div>
+    <div class="model"><span class="lab">Pay monthly</span><strong>Subscriptions</strong><p>Game Pass and PlayStation Plus. Microsoft cut Game Pass Ultimate from $29.99 to $22.99 this year.</p></div>
+    <div class="model"><span class="lab">Take a cut</span><strong>Platform fees</strong><p>Console makers and app stores keep about 30% of most sales. Court rulings are now letting mobile games route players to cheaper web payments.</p></div>
+  </div>
+  <p class="src"><a href="https://www.gamespot.com/articles/80-games-are-already-here/">GameSpot ($80 games)</a> · <a href="https://www.cnbc.com/2026/04/21/microsoft-game-pass-ultimate-subscription-price-cut.html">CNBC (Game Pass)</a> · <a href="https://www.androidheadlines.com/2026/06/google-play-store-external-billing-fee-changes.html">Android Headlines (Google fees)</a></p>
+
+  <p class="callout"><strong>Bookings vs. revenue.</strong> Game companies report two sales numbers. <em>Net bookings</em> is what players spent in the period. <em>Revenue</em> is what accounting rules let the company recognize, often spread over months because online games keep serving players after they pay. Investors watch bookings because it shows current demand.</p>
+</section>
+
+<!-- ================= PART B ================= -->
+<section id="gta">
+  <div class="part-head"><span class="eyebrow">Part B</span><h2>GTA VI and Take-Two <span class="tk" style="color:var(--sc);font-size:0.6em">TTWO</span></h2></div>
+  <div class="prose">
+    <p>Take-Two owns Rockstar Games (Grand Theft Auto, Red Dead Redemption) and 2K (NBA 2K, Borderlands). GTA V, released in 2013, has sold more than 230 million copies and is still a steady earner more than a decade later. GTA VI is the most anticipated game launch in years.</p>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><span class="lab">Launch</span><span class="val">Thu Nov 19</span><p>PS5 and Xbox Series X|S; no PC date yet</p></div>
+    <div class="tile"><span class="lab">Price</span><span class="val">$79.99</span><p>$99.99 Ultimate Edition</p></div>
+    <div class="tile"><span class="lab">Est. budget</span><span class="val">$1–1.5B</span><p>Analyst estimate; no official figure</p></div>
+    <div class="tile"><span class="lab">Year-one est.</span><span class="val">35–70M</span><p>Copies, depending on the analyst</p></div>
+    <div class="tile"><span class="lab">GTA V benchmark</span><span class="val">$1B</span><p>Sales in its first 3 days in 2013</p></div>
+    <div class="tile"><span class="lab">Pre-orders</span><span class="val">"Unprecedented"</span><p>CEO's word; no number given</p></div>
+  </div>
+  <p class="src"><a href="https://www.sec.gov/Archives/edgar/data/0000946581/000162828026072175/ttwo2q27earningsrelease.htm">Take-Two release (SEC)</a> · <a href="https://www.forbes.com/sites/brianmazique/2026/10/30/what-gta-vis-20-ultimate-edition-upgrade-actually-buys-you/">Forbes (price)</a> · <a href="https://gamingbolt.com/grand-theft-auto-6-will-generate-10-billion-development-budget-will-cross-1-5-billion-analysts">GamingBolt (budget)</a> · <a href="https://www.forbes.com/sites/brianmazique/2026/06/08/gta-6-sales-estimates-point-to-a-record-no-game-has-hit/">Forbes (estimates)</a> · <a href="https://www.engadget.com/2013/09/20/gta-v-1-billion-in-3-days/">Engadget (GTA V)</a></p>
+
+  <div class="panel chart">
+    <div class="chart-title">
+      <h3>The GTA effect on Take-Two's bookings</h3>
+      <span class="src">Net bookings per quarter, US dollars. Striped bar is the company's forecast (midpoint).</span>
+    </div>
+    <div class="bars" role="list">
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="July to September 2026, 1.60 billion dollars">
+        <div class="bar-track"><div class="bar" style="width:44.4%"></div></div><span class="bar-val">$1.60B</span>
+        <span class="bar-label">Jul–Sep 2026</span>
+        <span class="tip">Down 18%; NBA 2K27 came in light</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="October to December 2026 forecast, 3.35 to 3.50 billion dollars">
+        <div class="bar-track"><div class="bar forecast" style="width:95.1%"></div></div><span class="bar-val">~$3.43B</span>
+        <span class="bar-label">Oct–Dec 2026 · forecast</span>
+        <span class="tip">Guided $3.35–3.50B, including GTA VI's launch</span>
+      </div>
+    </div>
+    <p class="chart-note">Take-Two's fiscal year ends March 31, so the GTA VI quarter is its fiscal Q3, reported in early February. It kept its full-year bookings outlook at $8.0–8.2B.</p>
+  </div>
+
+  <ul class="news">
+    <li><p><strong>The stock fell before launch.</strong> Take-Two dropped about 5–6% today, three days before release, and trades around 5.6 times sales. Traders call this "buy the rumor, sell the news": the excitement is already in the price, so a great launch may only meet expectations.</p>
+      <span class="src"><a href="https://www.tipranks.com/news/take-two-stock-ttwo-drops-over-5-ahead-of-gta-vi-release">TipRanks</a> · <a href="https://www.fool.com/investing/2026/11/11/gta-vi-days-away-don-t-expect-gta-v-style-returns-from-take-two-stock-at-5-7-times-sales/">Motley Fool</a></span></li>
+    <li><p><strong>Almost all sales are digital.</strong> 98% of Take-Two's bookings last quarter were digital downloads and in-game spending, which carry higher margins than discs in stores.</p>
+      <span class="src"><a href="https://www.sec.gov/Archives/edgar/data/0000946581/000162828026072175/ttwo2q27earningsrelease.htm">Take-Two release</a></span></li>
+    <li><p><strong>The long tail is the real prize.</strong> GTA V earned for over a decade through GTA Online. Investors will watch whether GTA VI's online mode can do the same, which matters more than opening weekend.</p></li>
+  </ul>
+</section>
+
+<!-- ================= PART C ================= -->
+<section id="roblox">
+  <div class="part-head"><span class="eyebrow">Part C</span><h2>Roblox <span class="tk" style="color:var(--sc);font-size:0.6em">RBLX</span></h2></div>
+
+  <div class="block">
+    <h3>How Roblox makes money</h3>
+    <ol class="steps">
+      <li><p><strong>Players buy Robux</strong>, Roblox's in-game currency, with real money.</p></li>
+      <li><p><strong>They spend Robux</strong> inside games made by independent creators.</p></li>
+      <li><p><strong>Roblox keeps a share</strong> and pays creators through its DevEx program: $403M last quarter, 24% of bookings, up from 22% after it raised creator rates.</p></li>
+      <li><p><strong>Revenue is spread out over time</strong>, which is why Roblox's revenue can rise while its bookings fall.</p></li>
+    </ol>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><span class="lab">Daily users</span><span class="val">138M</span><p>−9% from a year ago</p></div>
+    <div class="tile"><span class="lab">Bookings</span><span class="val">$1.70B</span><p>−12% from a year ago</p></div>
+    <div class="tile"><span class="lab">Monthly payers</span><span class="val">30M</span><p>−16%; but each spends 5% more</p></div>
+    <div class="tile"><span class="lab">Hours played</span><span class="val">~34B</span><p>−15% from a year ago</p></div>
+    <div class="tile"><span class="lab">Safety settlements</span><span class="val">$140M</span><p>So far in 2026</p></div>
+    <div class="tile"><span class="lab">Stock, 1 year</span><span class="val dn">−51%</span><p>Before today's further drop</p></div>
+  </div>
+  <p class="src">Jul–Sep 2026 quarter, reported Oct 29: <a href="https://www.sec.gov/Archives/edgar/data/0001315098/000162828026068235/ex991-q32026earningsshar.htm">Roblox shareholder letter (SEC)</a> · <a href="https://www.fool.com/quote/nyse/rblx/">Motley Fool (1-year change)</a></p>
+
+  <ul class="news">
+    <li><p><strong>Safety vs. growth.</strong> In January Roblox made age checks mandatory to use chat, after years of child-safety criticism and lawsuits. By the end of September 64% of daily users had completed one. It made the platform safer, but fewer people could chat and fewer new players signed up.</p>
+      <span class="src"><a href="https://www.cnbc.com/2026/05/01/roblox-rblx-stock-child-safety-earnings.html">CNBC</a></span></li>
+    <li><p><strong>Guidance kept falling.</strong> In April Roblox cut its full-year bookings forecast from $8.28–8.55B to $7.33–7.60B, and the stock fell 18%. In July it stopped giving a full-year forecast. After the October report, which missed on daily users and guided holiday bookings down 10–15%, the stock fell about 18% more.</p>
+      <span class="src"><a href="https://www.cnbc.com/2026/05/01/roblox-rblx-stock-child-safety-earnings.html">CNBC</a> · <a href="https://www.investing.com/news/transcripts/earnings-call-transcript-roblox-q2-2026-beats-eps-but-shares-sink-on-bookings-93CH-4826338">Investing.com</a> · <a href="https://finance.yahoo.com/markets/stocks/articles/roblox-plunges-19-daily-users-145304635.html">Yahoo Finance</a></span></li>
+    <li><p><strong>GTA VI is a headwind too.</strong> Roblox's CFO named the GTA VI release as a modest drag on the holiday quarter, since older players have a big new game to spend time on.</p>
+      <span class="src"><a href="https://finance.yahoo.com/markets/stocks/articles/roblox-plunges-19-daily-users-145304635.html">Yahoo Finance</a></span></li>
+    <li><p><strong>Still cash-generating.</strong> Roblox lost $230M on paper last quarter but generated $364M of free cash, because players pay up front. It expects negative cash flow in the holiday quarter.</p>
+      <span class="src"><a href="https://www.sec.gov/Archives/edgar/data/0001315098/000162828026068235/ex991-q32026earningsshar.htm">Roblox shareholder letter</a></span></li>
+  </ul>
+</section>
+
+<!-- ================= PART D ================= -->
+<section id="consoles">
+  <div class="part-head"><span class="eyebrow">Part D</span><h2>Consoles: Nintendo, Sony, Xbox</h2></div>
+  <p>Console makers usually sell hardware at thin margins, then earn on games, subscriptions and the cut they take from other publishers. This year the hardware got harder: the memory shortage covered in sector 2 raised the cost of every console.</p>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Company</th><th>Ticker</th><th>Latest</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Nintendo</td><td class="t tk">NTDOY</td><td>Switch 2 has sold 26.35M units in total, but sales fell 37% in Apr–Sep. The US price rose from $449.99 to $499.99 in September because of memory and tariff costs. It still targets 16.5M for the year to March, which needs about 10M in the holiday half. Mario Kart World has sold 16.48M.</td></tr>
+      <tr><td class="k">Sony</td><td class="t tk">SONY</td><td>PlayStation operating income rose to ¥220B in Jul–Sep, and Sony raised its full-year profit forecast. PS5 shipments fell 35% to 2.6M in the quarter as the console ages. Sony called memory costs the key risk for next year.</td></tr>
+      <tr><td class="k">Microsoft Xbox</td><td class="t tk">MSFT</td><td>Xbox revenue fell 2% to $5.38B. New gaming CEO Asha Sharma replaced Phil Spencer in February. Xbox now publishes games on PlayStation too, and cut Game Pass prices.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src"><a href="https://www.nintendo.co.jp/ir/pdf/2026/261106e.pdf">Nintendo results</a> · <a href="https://gonintendo.com/contents/66929-nintendo-results-for-q2-of-fiscal-year-ending-march-2027-switch-at-157-20-million">GoNintendo</a> · <a href="https://www.cnbc.com/2026/05/08/nintendo-switch-2-price-hike-sales-fall-memory-crunch.html">CNBC (Switch 2 price)</a> · <a href="https://www.sec.gov/Archives/edgar/data/0000313838/000110465926122964/tm2628525d5_6k.htm">Sony results (SEC)</a> · <a href="https://www.tipranks.com/news/company-announcements/sony-earnings-call-highlights-record-growth-and-upgraded-outlook">TipRanks (Sony call)</a> · <a href="https://www.microsoft.com/en-us/investor/earnings/fy-2027-q1/press-release-webcast">Microsoft results</a> · <a href="https://fortune.com/2026/10/20/the-non-gamer-ceo-racing-to-save-microsofts-xbox/">Fortune (Xbox CEO)</a></p>
+  <p class="callout"><strong>A link between sectors.</strong> The same HBM boom that made SK Hynix record profits made ordinary memory scarce. That's why a console launched last year now costs $50 more. Sectors that look unrelated often share a supply chain.</p>
+</section>
+
+<!-- ================= PART E ================= -->
+<section id="rest">
+  <div class="part-head"><span class="eyebrow">Part E</span><h2>The rest of the sector</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Company</th><th>Ticker</th><th>Latest</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Unity</td><td class="t tk">U</td><td>Game engine and mobile ad tools. Revenue up 32% to $622M and its first GAAP profit, $122M; its ad platform grew 126%. Stock jumped 22%.</td></tr>
+      <tr><td class="k">Tencent</td><td class="t tk">TCEHY</td><td>World's largest games company. Domestic game revenue grew 17% last reported quarter; international was flat. Results due around Nov 18.</td></tr>
+      <tr><td class="k">NetEase</td><td class="t tk">NTES</td><td>Chinese publisher. Game revenue up about 10%, with margins helped by lower app-store revenue sharing. Results due Nov 19.</td></tr>
+      <tr><td class="k">Capcom</td><td class="t">9697 (Tokyo)</td><td>Resident Evil and Monster Hunter. Half-year operating profit up 55%; Resident Evil Requiem has sold over 8M.</td></tr>
+      <tr><td class="k">Electronic Arts</td><td class="t">Private</td><td>Bought for $55B ($210 a share) by a group led by Saudi Arabia's PIF. Delisted Aug 4.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src"><a href="https://www.sec.gov/Archives/edgar/data/0001810806/000181080626000053/a2026q3ex-991.htm">Unity (SEC)</a> · <a href="https://www.cnbc.com/2026/08/12/china-tencent-earnings-q2-2026-gaming-ai-advertising.html">CNBC (Tencent)</a> · <a href="https://www.sec.gov/Archives/edgar/data/0001110646/000110465926098940/tm2623482d1_ex99-1.htm">NetEase (SEC)</a> · <a href="https://www.capcom.co.jp/ir/english/data/pdf/explanation/2026/2nd/explanation_2026_2nd_01.pdf">Capcom</a> · <a href="https://www.ea.com/news/ea-announces-completion-of-acquisition">EA</a></p>
+
+  <ul class="news">
+    <li><p><strong>Layoffs keep coming.</strong> Nearly 11,000 game industry jobs were cut through Oct 20, already more than all of 2025.</p>
+      <span class="src"><a href="https://www.tweaktown.com/news/114442/games-industry-layoffs-hit-10977-in-2026-already-surpassing-all-of-2025-with-months-to-go/index.html">TweakTown</a></span></li>
+    <li><p><strong>AI is arriving, uneasily.</strong> 40% of game developers now use generative AI tools, and 55% think it's having a negative effect on the industry.</p>
+      <span class="src"><a href="https://www.gamingonlinux.com/2026/11/gdc-november-2026-survey-shows-40-percent-of-developers-using-generative-ai/">GDC survey via GamingOnLinux</a></span></li>
+    <li><p><strong>App-store fees are loosening.</strong> In the US, Apple must let apps link to web payments without a commission, and the Supreme Court hears Apple's appeal on Jan 11. Google changed its fee structure in June. Mobile publishers keep more of each dollar when players pay outside the store.</p>
+      <span class="src"><a href="https://www.cnbc.com/2026/05/06/supreme-court-declines-to-pause-order-holding-apple-in-contempt-in-epic-games-lawsuit.html">CNBC</a> · <a href="https://www.theepochtimes.com/us/supreme-court-date-set-in-apple-antitrust-contempt-fight-6113550">Epoch Times</a></span></li>
+  </ul>
+</section>
+
+<section id="watch">
+  <div class="block"><span class="eyebrow">Dates that will move this sector</span><h2>What to watch</h2></div>
+  <div class="panel watch">
+    <div class="watch-row"><span class="when">Nov 18–19</span><p><strong>Tencent and NetEase results</strong>, and <strong>GTA VI's launch</strong> on the 19th. Watch reviews and any early sales figures Take-Two announces.</p></div>
+    <div class="watch-row"><span class="when">Dec 10</span><p><strong>The Game Awards</strong>, where big new games are often announced.</p></div>
+    <div class="watch-row"><span class="when">Jan 11</span><p><strong>Supreme Court hears Apple's appeal</strong> in the Epic case over app-store payments.</p></div>
+    <div class="watch-row"><span class="when">Late Jan–Feb</span><p><strong>Holiday-quarter results.</strong> Take-Two's first GTA VI quarter (early Feb), Roblox, Sony, Nintendo's Switch 2 progress, and Microsoft's Xbox.</p></div>
+  </div>
+
+  <div class="two">
+    <div class="panel"><h3>Bull case</h3><ul>
+      <li>GTA VI could be the biggest entertainment launch ever, with years of online revenue after it</li>
+      <li>$80 pricing and digital sales lift margins</li>
+      <li>Lower app-store fees let mobile publishers keep more</li>
+      <li>Unity's turnaround shows ad tech recovering</li>
+    </ul></div>
+    <div class="panel"><h3>Bear case</h3><ul>
+      <li>Hits are unpredictable, and a lot is already priced into Take-Two</li>
+      <li>Memory costs squeeze console makers and raise prices for players</li>
+      <li>Roblox's safety changes may permanently lower growth</li>
+      <li>Players may cut back if the economy slows and rates rise</li>
+    </ul></div>
+  </div>
+</section>
+
+<section id="terms">
+  <div class="block"><span class="eyebrow">Reference</span><h2>Words in this sector</h2></div>
+  <dl class="terms">
+    <div><dt>Net bookings</dt><dd>What players spent in a period, before accounting spreads it out. The headline number for game companies.</dd></div>
+    <div><dt>Deferred revenue</dt><dd>Money already paid but not yet counted as revenue, because the company still owes players the service.</dd></div>
+    <div><dt>DAU</dt><dd>Daily active users. Roblox's most watched number.</dd></div>
+    <div><dt>Payers</dt><dd>Users who spend money in a month. Usually a small fraction of all players.</dd></div>
+    <div><dt>DevEx</dt><dd>Roblox's program for converting creators' Robux into real money.</dd></div>
+    <div><dt>Live service</dt><dd>A game updated for years with new content and purchases, like GTA Online.</dd></div>
+    <div><dt>Sell-in vs. sell-through</dt><dd>Units shipped to stores versus units bought by players. Companies often report sell-in.</dd></div>
+    <div><dt>Platform fee</dt><dd>The cut a console maker or app store takes, usually around 30%.</dd></div>
+  </dl>
+</section>
+
+<section id="quiz">
+  <div class="block"><span class="eyebrow">Check yourself</span><h2>Seven-question quiz</h2></div>
+  <div class="quiz">
+    <div class="score"><span>Score: <strong id="score">0 of 7</strong> answered correctly</span><button type="button" class="reset" id="quiz-reset">Start over</button></div>
+
+    <div class="q" data-answer="c">
+      <p class="q-text">1. Which part of the games market is biggest?</p>
+      <div class="opts"><button type="button" data-k="a">Console</button><button type="button" data-k="b">PC</button><button type="button" data-k="c">Mobile</button><button type="button" data-k="d">They're about equal</button></div>
+      <p class="explain" hidden>Mobile is about 57% of the market, mostly from free-to-play games with in-game purchases.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">2. What are "net bookings"?</p>
+      <div class="opts"><button type="button" data-k="a">Pre-orders for games not yet released</button><button type="button" data-k="b">What players spent in the period, before accounting spreads it out</button><button type="button" data-k="c">Profit after taxes</button><button type="button" data-k="d">Number of games shipped</button></div>
+      <p class="explain" hidden>Bookings show current demand. Revenue can lag because companies spread recognition over the time they serve players.</p>
+    </div>
+
+    <div class="q" data-answer="a">
+      <p class="q-text">3. Take-Two fell about 5–6% just before the biggest launch in its history. What's the most likely reason?</p>
+      <div class="opts"><button type="button" data-k="a">The launch is already in the price, so traders take profits</button><button type="button" data-k="b">GTA VI was delayed again</button><button type="button" data-k="c">Take-Two cut its forecast</button><button type="button" data-k="d">Pre-orders were weak</button></div>
+      <p class="explain" hidden>"Buy the rumor, sell the news." The forecast was kept and pre-orders were described as unprecedented. Expectations were simply high.</p>
+    </div>
+
+    <div class="q" data-answer="d">
+      <p class="q-text">4. Roblox's revenue rose 16% while its bookings fell 12%. How can both be true?</p>
+      <div class="opts"><button type="button" data-k="a">One of them is a mistake</button><button type="button" data-k="b">Revenue includes advertising only</button><button type="button" data-k="c">Bookings exclude US players</button><button type="button" data-k="d">Revenue counts past spending spread over time; bookings show today's spending</button></div>
+      <p class="explain" hidden>Revenue reflects money paid in earlier, stronger months. Bookings show spending is falling now, which is why investors focus on it.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">5. Why did mandatory age checks hurt Roblox's numbers?</p>
+      <div class="opts"><button type="button" data-k="a">They cost a lot to run</button><button type="button" data-k="b">Fewer users could chat and fewer new users signed up, so engagement and spending fell</button><button type="button" data-k="c">They raised Robux prices</button><button type="button" data-k="d">They banned all players under 13</button></div>
+      <p class="explain" hidden>Chat and friends drive engagement on Roblox. Restricting chat until a check is done made the platform safer but slowed growth.</p>
+    </div>
+
+    <div class="q" data-answer="c">
+      <p class="q-text">6. Why did the Switch 2 get more expensive a year after launch?</p>
+      <div class="opts"><button type="button" data-k="a">GTA VI demand</button><button type="button" data-k="b">A new model was released</button><button type="button" data-k="c">Memory chip shortages and tariffs raised costs</button><button type="button" data-k="d">Nintendo switched factories</button></div>
+      <p class="explain" hidden>AI's demand for HBM made ordinary memory scarce and expensive, and tariffs added cost. Nintendo raised the US price by $50.</p>
+    </div>
+
+    <div class="q" data-answer="a">
+      <p class="q-text">7. Who usually keeps about 30% of a game sold on a console?</p>
+      <div class="opts"><button type="button" data-k="a">The console maker</button><button type="button" data-k="b">The game engine company</button><button type="button" data-k="c">The retailer, always</button><button type="button" data-k="d">The government</button></div>
+      <p class="explain" hidden>Sony, Microsoft and Nintendo take a platform fee on games sold for their consoles, similar to app stores on phones.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="block"><span class="eyebrow">Keep going</span><h2>Questions to ask Claude next</h2></div>
+  <ul class="prompts">
+    <li><span class="prompt-text">GTA VI just launched. Walk me through the first sales numbers and what they mean for Take-Two.</span><button type="button" id="cp1" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Explain bookings vs. revenue with a simple example.</span><button type="button" id="cp2" data-copy>Copy</button></li>
+    <li><span class="prompt-text">How does Roblox pay creators, and how does DevEx work?</span><button type="button" id="cp3" data-copy>Copy</button></li>
+    <li><span class="prompt-text">How do memory prices affect Nintendo and Sony?</span><button type="button" id="cp4" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Quiz me harder on the games sector.</span><button type="button" id="cp5" data-copy>Copy</button></li>
+  </ul>
+</section>
+
+<footer>
+  <p><strong>Where this comes from.</strong> Company filings and news reports gathered on Nov 16, 2026, linked next to each item. Sales estimates for GTA VI vary widely between analysts. Prices change daily.</p>
+  <p><strong>Not investment advice.</strong> This page explains how the sector works and what's in the news. It doesn't recommend buying or selling anything.</p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var total = document.querySelectorAll('.q').length;
+  var scoreEl = document.getElementById('score');
+  function updateScore() { scoreEl.textContent = document.querySelectorAll('.q[data-result="right"]').length + ' of ' + total; }
+  document.querySelectorAll('.q').forEach(function (q) {
+    var answer = q.getAttribute('data-answer');
+    q.querySelectorAll('.opts button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (q.hasAttribute('data-result')) return;
+        var pick = btn.getAttribute('data-k');
+        q.querySelectorAll('.opts button').forEach(function (b) { b.disabled = true; if (b.getAttribute('data-k') === answer) b.classList.add('right'); });
+        if (pick !== answer) btn.classList.add('wrong');
+        q.setAttribute('data-result', pick === answer ? 'right' : 'wrong');
+        q.querySelector('.explain').hidden = false;
+        updateScore();
+      });
+    });
+  });
+  document.getElementById('quiz-reset').addEventListener('click', function () {
+    document.querySelectorAll('.q').forEach(function (q) {
+      q.removeAttribute('data-result'); q.querySelector('.explain').hidden = true;
+      q.querySelectorAll('.opts button').forEach(function (b) { b.disabled = false; b.classList.remove('right', 'wrong'); });
+    });
+    updateScore();
+  });
+  document.querySelectorAll('[data-copy]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var el = btn.parentElement.querySelector('.prompt-text'); var text = el.textContent.trim();
+      function done(label) { btn.textContent = label; setTimeout(function () { btn.textContent = 'Copy'; }, 1600); }
+      function fallback() { try { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); done('Selected'); } catch (e) { done('Copy failed'); } }
+      try { navigator.clipboard.writeText(text).then(function () { done('Copied'); }, fallback); } catch (e) { fallback(); }
+    });
+  });
+})();
+</script>
