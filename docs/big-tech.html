@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How Microsoft, Alphabet, Amazon, Meta and Apple make money, and the AI spending question.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b47cf'/%3E%3Cpath d='M7 23V9h3.2l5.8 8.2L21.8 9H25v14h-3.2v-8.4L16 22.4l-5.8-7.8V23z' fill='white'/%3E%3C/svg%3E">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>Big Tech Deep Dive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: same system as the rest of Market Notes; one ~800px column in four parts (money engines, the five companies, the AI spending question, regulators), sector-4 teal as the identifying color. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #151820;
+  --muted: #586070;
+  --line: #dde1e8;
+  --accent: #2b47cf;
+  --accent-soft: #e8ecfb;
+  --sc: #0b7168;          /* sector 4 teal */
+  --sc-soft: #e2f3f1;
+  --sc-mid: #bfe4df;
+  --down: #b83a2c;
+  --up: #17783f;
+  --right-bg: #e4f4ea;
+  --wrong-bg: #fbe7e4;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+    --accent: #93a6ff; --accent-soft: #1c2340;
+    --sc: #52d0c3; --sc-soft: #15302d; --sc-mid: #1f4843;
+    --down: #f58a7d; --up: #5fd98f; --right-bg: #143222; --wrong-bg: #3a1c19;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+  --accent: #93a6ff; --accent-soft: #1c2340;
+  --sc: #52d0c3; --sc-soft: #15302d; --sc-mid: #1f4843;
+  --down: #f58a7d; --up: #5fd98f; --right-bg: #143222; --wrong-bg: #3a1c19;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.wrap {
+  max-width: 800px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+  display: flex; flex-direction: column; gap: 56px;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 6vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.5rem, 4.2vw, 2rem); font-weight: 800; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.tk { font-family: var(--font-mono); font-weight: 600; font-size: 0.86em; white-space: nowrap; }
+.src { font-size: 0.82rem; color: var(--muted); }
+.src a { color: var(--muted); }
+.dn { color: var(--down); font-weight: 600; font-variant-numeric: tabular-nums; }
+.up { color: var(--up); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+header.intro { display: flex; flex-direction: column; gap: 16px; }
+.tag { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sc); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sc); flex: none; }
+.lede { font-size: 1.12rem; }
+nav.parts { display: flex; flex-wrap: wrap; gap: 8px; }
+nav.parts a { text-decoration: none; color: var(--fg); font-weight: 600; font-size: 0.9rem; padding: 7px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+nav.parts a span { font-family: var(--font-mono); color: var(--sc); margin-right: 6px; }
+nav.parts a:hover { border-color: var(--muted); }
+
+.part-head { display: flex; flex-direction: column; gap: 8px; padding-top: 28px; border-top: 3px solid var(--sc); }
+.part-head .eyebrow { color: var(--sc); font-weight: 600; }
+section { display: flex; flex-direction: column; gap: 18px; scroll-margin-top: 16px; }
+.block { display: flex; flex-direction: column; gap: 14px; }
+.prose { display: flex; flex-direction: column; gap: 12px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+
+.short { list-style: none; margin: 0; padding: 0; display: grid; }
+.short li { padding: 14px 0 14px 30px; border-top: 1px solid var(--line); position: relative; }
+.short li:first-child { border-top: 0; padding-top: 0; }
+.short li::before { content: ""; position: absolute; left: 4px; top: 22px; width: 12px; height: 2px; background: var(--sc); }
+.short li:first-child::before { top: 8px; }
+
+/* bar chart */
+.chart { display: flex; flex-direction: column; gap: 12px; }
+.chart-title { display: flex; flex-direction: column; gap: 2px; }
+.chart-title h3 { font-size: 1rem; }
+.bars { display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--muted); }
+.bar-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 84px; align-items: center; gap: 10px; padding: 7px 0; }
+.bar-label { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.85rem; font-weight: 600; color: var(--fg); pointer-events: none; white-space: nowrap; }
+.bar-track { height: 28px; display: flex; align-items: center; }
+.bar { height: 100%; background: var(--sc-soft); border-right: 4px solid var(--sc); border-radius: 0 4px 4px 0; min-width: 4px; }
+.bar-val { font-family: var(--font-mono); font-weight: 600; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.tip { position: absolute; left: 10px; bottom: calc(100% - 4px); z-index: 2; background: var(--fg); color: var(--bg); font-size: 0.78rem; padding: 6px 9px; border-radius: 6px; white-space: nowrap; max-width: calc(100vw - 48px); overflow: hidden; text-overflow: ellipsis; opacity: 0; transform: translateY(4px); transition: opacity 0.12s, transform 0.12s; pointer-events: none; }
+.bar-row:hover .tip, .bar-row:focus-visible .tip { opacity: 1; transform: none; }
+.bar-row:hover .bar, .bar-row:focus-visible .bar { background: var(--sc-mid); }
+.chart-note { font-size: 0.82rem; color: var(--muted); }
+.charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.charts .panel { min-width: 0; }
+
+/* company cards */
+.co { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.co-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.co-head h3 { font-size: 1.25rem; }
+.co-head .tk { color: var(--sc); font-size: 0.9rem; }
+.co-head .when { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
+.kv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.kv div { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 8px 10px; background: var(--bg); border-radius: 8px; }
+.kv .lab { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.kv .val { font-family: var(--font-display); font-weight: 800; font-size: 1.12rem; font-variant-numeric: tabular-nums; }
+.kv .sub { font-size: 0.78rem; color: var(--muted); }
+.co ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 0.93rem; }
+.co .mix { font-size: 0.88rem; color: var(--muted); }
+.co .mix strong { color: var(--fg); }
+
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 0.92rem; }
+th, td { text-align: left; padding: 10px 14px; vertical-align: top; border-top: 1px solid var(--line); }
+thead th { border-top: 0; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+td.k { font-weight: 600; white-space: nowrap; }
+td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.news { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.news li { padding: 12px 0 12px 18px; border-top: 1px solid var(--line); position: relative; }
+.news li:first-child { border-top: 0; padding-top: 0; }
+.news li::before { content: ""; position: absolute; left: 2px; top: 21px; width: 7px; height: 7px; border-radius: 50%; background: var(--sc); }
+.news li:first-child::before { top: 9px; }
+.news li p { font-size: 0.95rem; }
+.news .src { display: block; margin-top: 3px; }
+
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.two .panel { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.two ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; font-size: 0.92rem; }
+.two h3 { font-size: 0.95rem; }
+
+.terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin: 0; }
+.terms div { padding: 12px 0; border-top: 1px solid var(--line); min-width: 0; }
+.terms dt { font-weight: 600; }
+.terms dd { margin: 2px 0 0; color: var(--muted); font-size: 0.92rem; }
+
+.callout { border-left: 3px solid var(--sc); padding: 4px 0 4px 14px; font-size: 0.95rem; }
+.disclose { background: var(--sc-soft); border: 1px solid var(--sc-mid); border-radius: 10px; padding: 14px 16px; font-size: 0.93rem; }
+
+.watch { display: grid; }
+.watch-row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.watch-row:first-child { border-top: 0; padding-top: 0; }
+.watch-row:last-child { padding-bottom: 0; }
+.when-col { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; color: var(--sc); padding-top: 2px; }
+.watch-row p { font-size: 0.95rem; }
+
+.quiz { display: flex; flex-direction: column; gap: 14px; }
+.score { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.score strong { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.reset { font: 600 0.82rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.q-text { font-weight: 600; }
+.opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.opts button { text-align: left; font: 500 0.9rem/1.4 var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; min-width: 0; }
+.opts button:hover:not(:disabled) { border-color: var(--sc); }
+.opts button:disabled { cursor: default; }
+.opts button.right { background: var(--right-bg); border-color: var(--up); }
+.opts button.wrong { background: var(--wrong-bg); border-color: var(--down); }
+.opts button.right::after { content: "  ✓ correct"; color: var(--up); font-weight: 600; font-size: 0.8rem; }
+.opts button.wrong::after { content: "  ✗ your pick"; color: var(--down); font-weight: 600; font-size: 0.8rem; }
+.explain { font-size: 0.92rem; color: var(--muted); border-left: 2px solid var(--sc); padding-left: 12px; }
+
+.prompts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.prompts li { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 10px 10px 16px; }
+.prompts .prompt-text { flex: 1; min-width: 0; font-size: 0.93rem; }
+.prompts button { flex: none; font: 600 0.8rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+
+footer { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; }
+footer p { max-width: 75ch; }
+
+@media (max-width: 720px) {
+  .charts { grid-template-columns: minmax(0, 1fr); }
+  .kv { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .wrap { padding-block: 28px 48px; gap: 44px; }
+  .terms, .two, .opts { grid-template-columns: minmax(0, 1fr); }
+  .watch-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .panel, .co { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } html { scroll-behavior: auto; } }
+html { scroll-behavior: smooth; }
+</style>
+<style>
+.site-nav { background: var(--surface); border-bottom: 1px solid var(--line); }
+.site-nav-in {
+  max-width: 800px; margin: 0 auto; box-sizing: border-box;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px;
+}
+.site-brand { font-family: "Archivo", "Helvetica Neue", Arial, sans-serif; font-weight: 800; font-size: 1rem; color: var(--fg); text-decoration: none; letter-spacing: -0.01em; }
+.site-links { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.86rem; }
+.site-links a { color: var(--muted); text-decoration: none; padding: 2px 0; }
+.site-links a:hover { color: var(--fg); text-decoration: underline; }
+.site-links a[aria-current="page"] { color: var(--fg); font-weight: 600; }
+</style>
+</head>
+<body>
+<nav class="site-nav" aria-label="Site"><div class="site-nav-in"><a class="site-brand" href="index.html">Market Notes</a><div class="site-links"><a href="overview.html">Overview</a><a href="ai-chips.html">AI chips</a><a href="memory-power.html">Memory &amp; power</a><a href="games.html">Games</a><a href="big-tech.html" aria-current="page">Big Tech</a><a href="hot-topics.html">Tesla &amp; hot topics</a></div></div></nav>
+
+
+<div class="wrap">
+
+<header class="intro">
+  <span class="tag"><span class="dot"></span>Sector 4 · Deep dive · as of Nov 16, 2026</span>
+  <h1>Big Tech, one layer deeper</h1>
+  <p class="lede">Where Microsoft, Alphabet, Amazon, Meta and Apple actually make their money, what each reported last month, and the question hanging over all of them: is record AI spending going to pay off?</p>
+  <nav class="parts" aria-label="Parts">
+    <a href="#engines"><span>A</span>Money engines</a>
+    <a href="#companies"><span>B</span>The five companies</a>
+    <a href="#question"><span>C</span>The AI spending question</a>
+    <a href="#legal"><span>D</span>Regulators</a>
+  </nav>
+</header>
+
+<section>
+  <div class="block"><span class="eyebrow">If you only read one part</span><h2>The short version</h2></div>
+  <ul class="short">
+    <li><strong>Each company has one profit engine paying for its AI bets.</strong> Office and Azure, Google Search, AWS, Instagram and Facebook ads, and the iPhone.</li>
+    <li><strong>The clouds are booming.</strong> Google Cloud more than doubled, Azure grew 48% and AWS 39%. Each now has a backlog of signed future business above $500 billion.</li>
+    <li><strong>Spending now outruns cash.</strong> Amazon, Alphabet, Meta and Microsoft spent about $209B on capex in one quarter. Only Microsoft had cash left over. The others are borrowing and selling new shares to keep building.</li>
+    <li><strong>Apple is the exception.</strong> It spends far less on AI data centers and sells hardware instead. Its risk this quarter is memory costs squeezing margins.</li>
+  </ul>
+</section>
+
+<!-- ================= PART A ================= -->
+<section id="engines">
+  <div class="part-head"><span class="eyebrow">Part A</span><h2>Money engines</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Company</th><th>Biggest business</th><th>Everything else</th><th>Worth knowing</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Microsoft</td><td>Office, LinkedIn and business software (42%)</td><td>Azure and servers (42%), Windows, Xbox and devices (16%)</td><td>Renamed its segments this year; Azure is now in "Agents &amp; Infra"</td></tr>
+      <tr><td class="k">Alphabet</td><td>Google Search ads (50%)</td><td>Cloud (24%), subscriptions and devices (11%), YouTube ads (9%), ad network (6%)</td><td>Cloud went from a sideline to a quarter of revenue</td></tr>
+      <tr><td class="k">Amazon</td><td>North America stores (59%)</td><td>International stores (23%), AWS (18%)</td><td>AWS is 18% of sales but about 63% of operating profit</td></tr>
+      <tr><td class="k">Meta</td><td>Ads (about 98%)</td><td>Reality Labs headsets and glasses</td><td>Reality Labs loses about $4B a quarter</td></tr>
+      <tr><td class="k">Apple</td><td>iPhone (53%)</td><td>Services (26%), Mac (8%), Wearables (7%), iPad (6%)</td><td>Services carry far higher margins than hardware</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">Shares of revenue from each company's latest full year (Alphabet from Jul–Sep 2026): <a target="_blank" rel="noopener" href="https://www.sec.gov/Archives/edgar/data/0000789019/000119312526323660/msft-20260630.htm">Microsoft 10-K</a> · <a target="_blank" rel="noopener" href="https://www.sec.gov/Archives/edgar/data/0001652044/000165204426000080/googexhibit991q32026.htm">Alphabet</a> · <a target="_blank" rel="noopener" href="https://s2.q4cdn.com/299287126/files/doc_earnings/2025/q4/earnings-result/AMZN-Q4-2025-Earnings-Release.pdf">Amazon</a> · <a target="_blank" rel="noopener" href="https://investor.atmeta.com/investor-news/press-release-details/2026/Meta-Reports-Third-Quarter-2026-Results/default.aspx">Meta</a> · <a target="_blank" rel="noopener" href="https://www.sec.gov/Archives/edgar/data/0000320193/000032019326000024/a8-kex991q4202609262026.htm">Apple</a></p>
+
+  <div class="charts">
+    <div class="panel chart">
+      <div class="chart-title"><h3>Cloud growth, Jul–Sep 2026</h3><span class="src">Revenue growth vs. a year earlier</span></div>
+      <div class="bars" role="list">
+        <div class="bar-row" tabindex="0" role="listitem" aria-label="Google Cloud, plus 103 percent, 30.7 billion dollars">
+          <div class="bar-track"><div class="bar" style="width:93.6%"></div></div><span class="bar-val">+103%</span>
+          <span class="bar-label">Google Cloud</span><span class="tip">$30.7B in the quarter</span>
+        </div>
+        <div class="bar-row" tabindex="0" role="listitem" aria-label="Microsoft Azure, plus 48 percent, 33.2 billion dollars">
+          <div class="bar-track"><div class="bar" style="width:43.6%"></div></div><span class="bar-val">+48%</span>
+          <span class="bar-label">Azure</span><span class="tip">$33.2B in the quarter</span>
+        </div>
+        <div class="bar-row" tabindex="0" role="listitem" aria-label="Amazon Web Services, plus 39 percent, 46.0 billion dollars">
+          <div class="bar-track"><div class="bar" style="width:35.5%"></div></div><span class="bar-val">+39%</span>
+          <span class="bar-label">AWS</span><span class="tip">$46.0B · still the largest cloud</span>
+        </div>
+      </div>
+      <p class="chart-note">AWS is the biggest; Google Cloud is growing fastest from a smaller base.</p>
+    </div>
+    <div class="panel chart">
+      <div class="chart-title"><h3>Capex, Jul–Sep 2026</h3><span class="src">US dollars, one quarter</span></div>
+      <div class="bars" role="list">
+        <div class="bar-row" tabindex="0" role="listitem" aria-label="Amazon, 77.3 billion dollars">
+          <div class="bar-track"><div class="bar" style="width:96.6%"></div></div><span class="bar-val">$77.3B</span>
+          <span class="bar-label">Amazon</span><span class="tip">~$220B expected for all of 2026</span>
+        </div>
+        <div class="bar-row" tabindex="0" role="listitem" aria-label="Alphabet, 51.4 billion dollars">
+          <div class="bar-track"><div class="bar" style="width:64.3%"></div></div><span class="bar-val">$51.4B</span>
+          <span class="bar-label">Alphabet</span><span class="tip">$195–205B for 2026</span>
+        </div>
+        <div class="bar-row" tabindex="0" role="listitem" aria-label="Microsoft, 45.2 billion dollars including finance leases">
+          <div class="bar-track"><div class="bar" style="width:56.5%"></div></div><span class="bar-val">$45.2B</span>
+          <span class="bar-label">Microsoft</span><span class="tip">Includes leased data centers</span>
+        </div>
+        <div class="bar-row" tabindex="0" role="listitem" aria-label="Meta, 34.9 billion dollars">
+          <div class="bar-track"><div class="bar" style="width:43.6%"></div></div><span class="bar-val">$34.9B</span>
+          <span class="bar-label">Meta</span><span class="tip">$135–145B for 2026</span>
+        </div>
+      </div>
+      <p class="chart-note">About $209B combined in three months, much of it flowing to Nvidia, TSMC and memory makers.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PART B ================= -->
+<section id="companies">
+  <div class="part-head"><span class="eyebrow">Part B</span><h2>The five companies</h2></div>
+  <p>All five reported results for July–September in late October or early November. Microsoft and Apple number their fiscal years differently, so headlines may call this quarter by other names.</p>
+
+  <article class="co">
+    <div class="co-head"><h3>Microsoft <span class="tk">MSFT</span></h3><span class="when">Reported Oct 28</span></div>
+    <div class="kv">
+      <div><span class="lab">Revenue</span><span class="val">$92.3B</span><span class="sub">+19%</span></div>
+      <div><span class="lab">Op. margin</span><span class="val">~50%</span><span class="sub">$45.9B profit</span></div>
+      <div><span class="lab">Azure</span><span class="val">+48%</span><span class="sub">$33.2B</span></div>
+      <div><span class="lab">Backlog</span><span class="val">$677B</span><span class="sub">+73%</span></div>
+    </div>
+    <ul>
+      <li>The only one of the four big spenders whose cash flow covered its capex: $18.6B of free cash flow after $45.2B of spending.</li>
+      <li>Expects next quarter's revenue at $96–97B and Azure growth of 49–50%. Shares ended about flat.</li>
+      <li>Its OpenAI deal was reset in April: OpenAI can now use any cloud, and Microsoft's license became non-exclusive. Microsoft owns roughly a quarter of OpenAI.</li>
+      <li>Copilot for Office had more than 30 million paid seats as of July, at $30 per user per month.</li>
+    </ul>
+    <p class="src"><a target="_blank" rel="noopener" href="https://news.microsoft.com/source/2026/10/28/microsoft-announces-first-quarter-results-2/">Microsoft release</a> · <a target="_blank" rel="noopener" href="https://www.cnbc.com/2026/10/28/microsoft-msft-q1-earnings-report-2027.html">CNBC</a> · <a target="_blank" rel="noopener" href="https://blogs.microsoft.com/blog/2026/04/27/the-next-phase-of-the-microsoft-openai-partnership/">OpenAI partnership update</a></p>
+  </article>
+
+  <article class="co">
+    <div class="co-head"><h3>Alphabet <span class="tk">GOOGL</span></h3><span class="when">Reported Oct 28</span></div>
+    <div class="kv">
+      <div><span class="lab">Revenue</span><span class="val">$127.6B</span><span class="sub">+25%</span></div>
+      <div><span class="lab">Search</span><span class="val">+12%</span><span class="sub">$63.4B</span></div>
+      <div><span class="lab">Cloud</span><span class="val">+103%</span><span class="sub">$30.7B, 36% margin</span></div>
+      <div><span class="lab">Free cash flow</span><span class="val dn">−$9.1B</span><span class="sub">capex &gt; cash in</span></div>
+    </div>
+    <ul>
+      <li>Spent $51.4B on capex against $42.3B of operating cash flow, and said 2027 spending will rise significantly. The stock fell about 13%, its worst day on record.</li>
+      <li>Funding the gap: $28.7B of new bonds and about $12.4B of new shares in the quarter, after an $84.75B stock sale in June that included $10B from Berkshire Hathaway.</li>
+      <li>The Gemini app has 1 billion users, and Google now sells its TPU chips to outside customers. Ads in AI search earn less per search so far, which slowed Search growth.</li>
+      <li>Cloud backlog is about $560B, a little over half expected as revenue within two years.</li>
+    </ul>
+    <p class="src"><a target="_blank" rel="noopener" href="https://www.sec.gov/Archives/edgar/data/0001652044/000165204426000080/googexhibit991q32026.htm">Alphabet release (SEC)</a> · <a target="_blank" rel="noopener" href="https://www.cnbc.com/2026/10/29/alphabet-google-search-ai-earnings.html">CNBC</a> · <a target="_blank" rel="noopener" href="https://searchengineland.com/google-earnings-call-q3-2026-499706">Search Engine Land</a> · <a target="_blank" rel="noopener" href="https://s206.q4cdn.com/479360582/files/doc_news/2026/Jun/03/attachments/Alphabet-Pricing-Press-Release_2026-06-03.pdf">June stock sale</a></p>
+  </article>
+
+  <article class="co">
+    <div class="co-head"><h3>Amazon <span class="tk">AMZN</span></h3><span class="when">Reported Oct 29</span></div>
+    <div class="kv">
+      <div><span class="lab">Sales</span><span class="val">$201.9B</span><span class="sub">+12%</span></div>
+      <div><span class="lab">AWS</span><span class="val">+39%</span><span class="sub">$46.0B</span></div>
+      <div><span class="lab">AWS profit</span><span class="val">$17.8B</span><span class="sub">~63% of total</span></div>
+      <div><span class="lab">Ads</span><span class="val">$19.6B</span><span class="sub">+11%</span></div>
+    </div>
+    <ul>
+      <li>Record 13.9% operating margin, but quarterly capex hit $77.3B and free cash flow over the last 12 months is −$42.4B. It expects about $220B of capex this year and "meaningfully more" in 2027.</li>
+      <li>Holiday-quarter guidance of $240–247B in sales disappointed, and the stock fell after the report.</li>
+      <li>Sold about $54B of bonds in March and $25B more in July.</li>
+      <li>Plans to sell its Trainium AI chips to outside customers from late 2027.</li>
+    </ul>
+    <p class="src"><a target="_blank" rel="noopener" href="https://www.sec.gov/Archives/edgar/data/0001018724/000101872426000038/amzn-20260930xex991.htm">Amazon release (SEC)</a> · <a target="_blank" rel="noopener" href="https://www.cnbc.com/2026/10/29/amazon-amzn-q3-earnings-report-2026.html">CNBC</a> · <a target="_blank" rel="noopener" href="https://www.cnbc.com/2026/07/07/amazon-bond-sale-ai-debt.html">CNBC (bonds)</a></p>
+  </article>
+
+  <article class="co">
+    <div class="co-head"><h3>Meta <span class="tk">META</span></h3><span class="when">Reported Oct 21</span></div>
+    <div class="kv">
+      <div><span class="lab">Revenue</span><span class="val">$64.6B</span><span class="sub">+26%</span></div>
+      <div><span class="lab">Price per ad</span><span class="val">+14%</span><span class="sub">ads shown +10%</span></div>
+      <div><span class="lab">Op. profit</span><span class="val">$13.0B</span><span class="sub">−37%, see below</span></div>
+      <div><span class="lab">Free cash flow</span><span class="val dn">−$2.1B</span><span class="sub">first since 2012</span></div>
+    </div>
+    <ul>
+      <li>Ad sales are strong, helped by AI that targets ads better. Profit fell because of a $9.89B charge to settle youth-harm claims with states.</li>
+      <li>Free cash flow turned negative for the first time since 2012. The stock rose after hours, then fell about 7% the next day, and S&amp;P moved its credit outlook to negative.</li>
+      <li>Funding: $25B of new stock at $625 a share, $12.5B of convertible preferred shares, and a new bond sale this month.</li>
+      <li>Reality Labs lost $4.1B in the quarter, and Meta expects about $15B of losses there in 2027.</li>
+    </ul>
+    <p class="src"><a target="_blank" rel="noopener" href="https://investor.atmeta.com/investor-news/press-release-details/2026/Meta-Reports-Third-Quarter-2026-Results/default.aspx">Meta release</a> · <a target="_blank" rel="noopener" href="https://www.cnbc.com/2026/10/22/meta-stock-q3-earnings-free-cash-flow.html">CNBC</a> · <a target="_blank" rel="noopener" href="https://www.cnbc.com/2026/10/30/meta-outlook-to-revised-to-negative-by-sp-after-cash-flow-negative.html">CNBC (S&amp;P)</a> · <a target="_blank" rel="noopener" href="https://www.fool.com/investing/2026/10/28/meta-just-priced-a-stock-sale-at-usd625-a-share-i-d-consider-buying-at-the-same-price/">Motley Fool (stock sale)</a></p>
+  </article>
+
+  <article class="co">
+    <div class="co-head"><h3>Apple <span class="tk">AAPL</span></h3><span class="when">Reported Nov 2</span></div>
+    <div class="kv">
+      <div><span class="lab">Revenue</span><span class="val">$114.5B</span><span class="sub">+12%</span></div>
+      <div><span class="lab">iPhone</span><span class="val">+17%</span><span class="sub">$57.6B</span></div>
+      <div><span class="lab">Services</span><span class="val">+10%</span><span class="sub">$31.6B</span></div>
+      <div><span class="lab">Gross margin</span><span class="val">47.9%</span><span class="sub">45–46% next qtr</span></div>
+    </div>
+    <ul>
+      <li>The first report under new CEO John Ternus. iPhone sales were strong, Mac grew 24%, and Greater China grew 21%.</li>
+      <li>Guided the holiday quarter to 7–10% growth but a lower gross margin because memory chips cost more. Shares fell about 3% after hours.</li>
+      <li>Apple's AI pitch is hardware: the upgraded Siri is a free update meant to sell new devices, and the $2,000 iPhone Duo foldable went on sale Oct 23.</li>
+    </ul>
+    <p class="src"><a target="_blank" rel="noopener" href="https://www.sec.gov/Archives/edgar/data/0000320193/000032019326000024/a8-kex991q4202609262026.htm">Apple release (SEC)</a> · <a target="_blank" rel="noopener" href="https://www.cnbc.com/2026/11/02/apple-aapl-q4-2026-earnings-live-updates.html">CNBC</a></p>
+  </article>
+</section>
+
+<!-- ================= PART C ================= -->
+<section id="question">
+  <div class="part-head"><span class="eyebrow">Part C</span><h2>The AI spending question</h2></div>
+  <div class="prose">
+    <p>For years these companies made so much cash they could fund anything from what they earned. In 2026 that changed. Capex grew faster than cash flow, so three of the four big spenders turned to <strong>borrowing</strong> (bonds) and <strong>selling new shares</strong>. New shares mean each existing share owns a slightly smaller slice, which is called <strong>dilution</strong>.</p>
+    <p>The servers they're buying also wear out in a few years. That cost, <strong>depreciation</strong>, will grow and weigh on reported profits for years, even if AI revenue keeps rising.</p>
+  </div>
+
+  <div class="two">
+    <div class="panel"><h3>The case it pays off</h3><ul>
+      <li>Cloud growth is accelerating, not slowing</li>
+      <li>Backlogs above $500B each mean the demand is already signed</li>
+      <li>Microsoft shows AI can be funded from cash flow</li>
+      <li>Ad businesses are growing faster thanks to AI targeting</li>
+    </ul></div>
+    <div class="panel"><h3>The case for worry</h3><ul>
+      <li>Free cash flow is negative at Alphabet, Meta and Amazon</li>
+      <li>Borrowing and new shares dilute owners and add debt</li>
+      <li>Depreciation will rise for years</li>
+      <li>Some big cloud customers are AI labs these companies also invest in, so the money partly goes in a circle</li>
+    </ul></div>
+  </div>
+
+  <p class="disclose"><strong>Disclosure:</strong> Anthropic, which makes Claude, is part of this story. Amazon has invested about $18B in it and Alphabet about $33B, and Anthropic has committed $47.2B to Microsoft's cloud. At the top of this week's IPO price range, Amazon's stake would be worth about $272B and Alphabet's about $139B, on paper. Treat this paragraph as reported facts, not a view on any of these companies.</p>
+  <p class="src"><a target="_blank" rel="noopener" href="https://whbl.com/2026/11/10/factbox-amazon-google-set-for-big-windfall-from-anthropic-ipo/">Reuters factbox via WHBL</a></p>
+</section>
+
+<!-- ================= PART D ================= -->
+<section id="legal">
+  <div class="part-head"><span class="eyebrow">Part D</span><h2>Regulators and courts</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Case</th><th>Where it stands</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Google · search</td><td>A judge ordered data sharing and a ban on exclusive deals but no Chrome sale. Both sides are appealing.</td></tr>
+      <tr><td class="k">Google · ad tech</td><td>In September a judge rejected forcing a sale of Google's ad exchange and ordered behavior changes instead. Google plans to appeal.</td></tr>
+      <tr><td class="k">Meta · FTC</td><td>Meta won in November 2025. The FTC is appealing.</td></tr>
+      <tr><td class="k">Apple · DOJ</td><td>In the evidence-gathering stage with no trial date. Settlement talks have been reported.</td></tr>
+      <tr><td class="k">Apple · Epic</td><td>Apple can't charge commission on US web purchases for now. The Supreme Court hears its appeal Jan 11.</td></tr>
+      <tr><td class="k">Amazon · FTC</td><td>Monopoly trial set for Mar 29, 2027.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src"><a target="_blank" rel="noopener" href="https://digiday.com/media-buying/google-avoided-yet-another-breakup-now-comes-the-test-of-the-ad-tech-remedies/">Digiday</a> · <a target="_blank" rel="noopener" href="https://www.bloomberg.com/news/articles/2026-01-20/us-ftc-to-appeal-court-ruling-on-meta-win-in-monopoly-case">Bloomberg</a> · <a target="_blank" rel="noopener" href="https://finance.yahoo.com/technology/articles/apple-officially-active-private-discussions-181126885.html">Yahoo Finance</a> · <a target="_blank" rel="noopener" href="https://macdailynews.com/2026/08/14/u-s-supreme-court-clears-path-for-app-store-commission-showdown-as-apple-must-defend-its-rates-in-lower-court/">MacDailyNews</a> · <a target="_blank" rel="noopener" href="https://www.mlex.com/mlex/articles/2536525/amazon-s-bid-to-delay-us-ftc-monopolization-trial-rejected-by-judge">MLex</a></p>
+</section>
+
+<section id="watch">
+  <div class="block"><span class="eyebrow">Dates that will move this sector</span><h2>What to watch</h2></div>
+  <div class="panel watch">
+    <div class="watch-row"><span class="when-col">Nov 17–20</span><p><strong>Microsoft Ignite.</strong> Watch for an updated Copilot seat count.</p></div>
+    <div class="watch-row"><span class="when-col">Nov 18–19</span><p><strong>Anthropic IPO.</strong> Sets a market value on Amazon's and Alphabet's stakes.</p></div>
+    <div class="watch-row"><span class="when-col">Nov 30–Dec 4</span><p><strong>AWS re:Invent</strong>, Amazon's big cloud conference.</p></div>
+    <div class="watch-row"><span class="when-col">Jan 11</span><p><strong>Supreme Court hears Apple's appeal</strong> on app-store payments.</p></div>
+    <div class="watch-row"><span class="when-col">Late Jan</span><p><strong>Holiday-quarter results</strong>, including Alphabet's 2027 spending plan and Apple's report around Jan 28.</p></div>
+  </div>
+</section>
+
+<section id="terms">
+  <div class="block"><span class="eyebrow">Reference</span><h2>Words in this sector</h2></div>
+  <dl class="terms">
+    <div><dt>Hyperscaler</dt><dd>A company running cloud data centers at giant scale: Amazon, Microsoft, Google, and often Meta.</dd></div>
+    <div><dt>Backlog / RPO</dt><dd>Remaining performance obligations: revenue customers have signed for but that hasn't been delivered yet.</dd></div>
+    <div><dt>Free cash flow</dt><dd>Cash from operations minus capex. Negative means the company needs outside money to keep spending.</dd></div>
+    <div><dt>Dilution</dt><dd>When a company issues new shares, each existing share owns a smaller slice.</dd></div>
+    <div><dt>Depreciation</dt><dd>Spreading the cost of servers and buildings over their useful life. Rising capex now means rising depreciation later.</dd></div>
+    <div><dt>Finance lease</dt><dd>Renting a data center long-term in a way accountants treat like owning it. Some capex totals include these, some don't.</dd></div>
+    <div><dt>At-the-market offering</dt><dd>Selling new shares gradually into the market instead of all at once.</dd></div>
+    <div><dt>Operating margin</dt><dd>Operating profit as a share of revenue. Microsoft's is about 50%; Amazon's about 14%.</dd></div>
+  </dl>
+</section>
+
+<section id="quiz">
+  <div class="block"><span class="eyebrow">Check yourself</span><h2>Seven-question quiz</h2></div>
+  <div class="quiz">
+    <div class="score"><span>Score: <strong id="score">0 of 7</strong> answered correctly</span><button type="button" class="reset" id="quiz-reset">Start over</button></div>
+
+    <div class="q" data-answer="c">
+      <p class="q-text">1. Which company gets about 98% of its revenue from ads?</p>
+      <div class="opts"><button type="button" data-k="a">Alphabet</button><button type="button" data-k="b">Amazon</button><button type="button" data-k="c">Meta</button><button type="button" data-k="d">Microsoft</button></div>
+      <p class="explain" hidden>Meta is almost entirely an ad business. Alphabet relies on ads too, but Cloud and subscriptions now make up over a third of its revenue.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">2. AWS is 18% of Amazon's sales but about 63% of its operating profit. Why?</p>
+      <div class="opts"><button type="button" data-k="a">AWS doesn't pay taxes</button><button type="button" data-k="b">Cloud computing earns much higher margins than retail</button><button type="button" data-k="c">Retail lost money</button><button type="button" data-k="d">AWS sales are counted twice</button></div>
+      <p class="explain" hidden>Selling computing capacity is far more profitable per dollar than selling goods with shipping and warehouse costs.</p>
+    </div>
+
+    <div class="q" data-answer="a">
+      <p class="q-text">3. What is a company's "backlog" or RPO?</p>
+      <div class="opts"><button type="button" data-k="a">Revenue customers have signed for but that hasn't been delivered yet</button><button type="button" data-k="b">Unpaid bills from customers</button><button type="button" data-k="c">Orders it couldn't fill</button><button type="button" data-k="d">Last year's revenue</button></div>
+      <p class="explain" hidden>Backlog shows future revenue already under contract. Microsoft's is $677B; Google Cloud's is about $560B.</p>
+    </div>
+
+    <div class="q" data-answer="d">
+      <p class="q-text">4. Alphabet made $40.6B of operating profit but had −$9.1B of free cash flow. How?</p>
+      <div class="opts"><button type="button" data-k="a">It paid a huge dividend</button><button type="button" data-k="b">It lost a lawsuit</button><button type="button" data-k="c">Its customers stopped paying</button><button type="button" data-k="d">Its capex was bigger than the cash its business brought in</button></div>
+      <p class="explain" hidden>Free cash flow subtracts capex. Spending $51.4B against $42.3B of operating cash flow leaves a gap.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">5. Why might existing shareholders dislike Meta selling $25B of new stock?</p>
+      <div class="opts"><button type="button" data-k="a">It lowers the share price by law</button><button type="button" data-k="b">Each existing share now owns a smaller slice of the company</button><button type="button" data-k="c">It cancels the dividend</button><button type="button" data-k="d">It moves Meta to a different stock exchange</button></div>
+      <p class="explain" hidden>That's dilution. The money may be well spent, but each share's claim on future profits shrinks.</p>
+    </div>
+
+    <div class="q" data-answer="c">
+      <p class="q-text">6. Why does Apple expect a lower gross margin this holiday quarter?</p>
+      <div class="opts"><button type="button" data-k="a">iPhone sales are falling</button><button type="button" data-k="b">It cut prices</button><button type="button" data-k="c">Memory chips cost more</button><button type="button" data-k="d">A new tax in China</button></div>
+      <p class="explain" hidden>The AI-driven memory shortage raises the cost of every phone and laptop. It's the same squeeze hitting Nintendo and Sony.</p>
+    </div>
+
+    <div class="q" data-answer="a">
+      <p class="q-text">7. Why does it matter that Microsoft's cash flow covered its capex while the others didn't?</p>
+      <div class="opts"><button type="button" data-k="a">It can keep building AI without borrowing or selling new shares</button><button type="button" data-k="b">It means Microsoft spends the least</button><button type="button" data-k="c">It guarantees the stock goes up</button><button type="button" data-k="d">It means Azure is the biggest cloud</button></div>
+      <p class="explain" hidden>Self-funded spending avoids dilution and new debt. Microsoft isn't the biggest cloud or the smallest spender; it just earns enough to pay for it.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="block"><span class="eyebrow">Keep going</span><h2>Questions to ask Claude next</h2></div>
+  <ul class="prompts">
+    <li><span class="prompt-text">Explain free cash flow vs. profit with a simple example.</span><button type="button" id="cp1" data-copy>Copy</button></li>
+    <li><span class="prompt-text">How does depreciation from AI servers affect Big Tech profits over the next few years?</span><button type="button" id="cp2" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Compare AWS, Azure and Google Cloud in plain English.</span><button type="button" id="cp3" data-copy>Copy</button></li>
+    <li><span class="prompt-text">What could the Google search appeal change for Alphabet?</span><button type="button" id="cp4" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Quiz me harder on Big Tech.</span><button type="button" id="cp5" data-copy>Copy</button></li>
+  </ul>
+</section>
+
+<footer>
+  <p><strong>Where this comes from.</strong> Company releases, filings and news reports gathered on Nov 16, 2026, linked with each item. Capex totals differ slightly depending on whether leases are counted. Prices change daily.</p>
+  <p><strong>Not investment advice.</strong> This page explains how these companies work and what's in the news. It doesn't recommend buying or selling anything. Anthropic, mentioned above, makes Claude, which helped write this page.</p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var total = document.querySelectorAll('.q').length;
+  var scoreEl = document.getElementById('score');
+  function updateScore() { scoreEl.textContent = document.querySelectorAll('.q[data-result="right"]').length + ' of ' + total; }
+  document.querySelectorAll('.q').forEach(function (q) {
+    var answer = q.getAttribute('data-answer');
+    q.querySelectorAll('.opts button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (q.hasAttribute('data-result')) return;
+        var pick = btn.getAttribute('data-k');
+        q.querySelectorAll('.opts button').forEach(function (b) { b.disabled = true; if (b.getAttribute('data-k') === answer) b.classList.add('right'); });
+        if (pick !== answer) btn.classList.add('wrong');
+        q.setAttribute('data-result', pick === answer ? 'right' : 'wrong');
+        q.querySelector('.explain').hidden = false;
+        updateScore();
+      });
+    });
+  });
+  document.getElementById('quiz-reset').addEventListener('click', function () {
+    document.querySelectorAll('.q').forEach(function (q) {
+      q.removeAttribute('data-result'); q.querySelector('.explain').hidden = true;
+      q.querySelectorAll('.opts button').forEach(function (b) { b.disabled = false; b.classList.remove('right', 'wrong'); });
+    });
+    updateScore();
+  });
+  document.querySelectorAll('[data-copy]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var el = btn.parentElement.querySelector('.prompt-text'); var text = el.textContent.trim();
+      function done(label) { btn.textContent = label; setTimeout(function () { btn.textContent = 'Copy'; }, 1600); }
+      function fallback() { try { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); done('Selected'); } catch (e) { done('Copy failed'); } }
+      try { navigator.clipboard.writeText(text).then(function () { done('Copied'); }, fallback); } catch (e) { fallback(); }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
