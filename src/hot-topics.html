@@ -1,0 +1,494 @@
+<title>Tesla &amp; Hot Topics Deep Dive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: same system as the rest of Market Notes; one ~800px column in four parts (Tesla, Anthropic IPO, other themes, rates backdrop), sector-5 coral as the identifying color. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #151820;
+  --muted: #586070;
+  --line: #dde1e8;
+  --accent: #2b47cf;
+  --accent-soft: #e8ecfb;
+  --sc: #b83a26;          /* sector 5 coral */
+  --sc-soft: #fbebe7;
+  --sc-mid: #f5d0c8;
+  --down: #b83a2c;
+  --up: #17783f;
+  --right-bg: #e4f4ea;
+  --wrong-bg: #fbe7e4;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+    --accent: #93a6ff; --accent-soft: #1c2340;
+    --sc: #ff8b74; --sc-soft: #36201b; --sc-mid: #52291f;
+    --down: #f58a7d; --up: #5fd98f; --right-bg: #143222; --wrong-bg: #3a1c19;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+  --accent: #93a6ff; --accent-soft: #1c2340;
+  --sc: #ff8b74; --sc-soft: #36201b; --sc-mid: #52291f;
+  --down: #f58a7d; --up: #5fd98f; --right-bg: #143222; --wrong-bg: #3a1c19;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.wrap {
+  max-width: 800px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+  display: flex; flex-direction: column; gap: 56px;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 6vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.5rem, 4.2vw, 2rem); font-weight: 800; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.tk { font-family: var(--font-mono); font-weight: 600; font-size: 0.86em; white-space: nowrap; }
+.src { font-size: 0.82rem; color: var(--muted); }
+.src a { color: var(--muted); }
+.dn { color: var(--down); font-weight: 600; font-variant-numeric: tabular-nums; }
+.up { color: var(--up); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+header.intro { display: flex; flex-direction: column; gap: 16px; }
+.tag { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sc); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sc); flex: none; }
+.lede { font-size: 1.12rem; }
+nav.parts { display: flex; flex-wrap: wrap; gap: 8px; }
+nav.parts a { text-decoration: none; color: var(--fg); font-weight: 600; font-size: 0.9rem; padding: 7px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+nav.parts a span { font-family: var(--font-mono); color: var(--sc); margin-right: 6px; }
+nav.parts a:hover { border-color: var(--muted); }
+
+.part-head { display: flex; flex-direction: column; gap: 8px; padding-top: 28px; border-top: 3px solid var(--sc); }
+.part-head .eyebrow { color: var(--sc); font-weight: 600; }
+section { display: flex; flex-direction: column; gap: 18px; scroll-margin-top: 16px; }
+.block { display: flex; flex-direction: column; gap: 14px; }
+.prose { display: flex; flex-direction: column; gap: 12px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+
+.short { list-style: none; margin: 0; padding: 0; display: grid; }
+.short li { padding: 14px 0 14px 30px; border-top: 1px solid var(--line); position: relative; }
+.short li:first-child { border-top: 0; padding-top: 0; }
+.short li::before { content: ""; position: absolute; left: 4px; top: 22px; width: 12px; height: 2px; background: var(--sc); }
+.short li:first-child::before { top: 8px; }
+
+/* bar chart */
+.chart { display: flex; flex-direction: column; gap: 12px; }
+.chart-title { display: flex; flex-direction: column; gap: 2px; }
+.chart-title h3 { font-size: 1rem; }
+.bars { display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--muted); }
+.bar-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 84px; align-items: center; gap: 10px; padding: 7px 0; }
+.bar-label { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.85rem; font-weight: 600; color: var(--fg); pointer-events: none; white-space: nowrap; }
+.bar-track { height: 28px; display: flex; align-items: center; }
+.bar { height: 100%; background: var(--sc-soft); border-right: 4px solid var(--sc); border-radius: 0 4px 4px 0; min-width: 4px; }
+.bar-val { font-family: var(--font-mono); font-weight: 600; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.tip { position: absolute; left: 10px; bottom: calc(100% - 4px); z-index: 2; background: var(--fg); color: var(--bg); font-size: 0.78rem; padding: 6px 9px; border-radius: 6px; white-space: nowrap; max-width: calc(100vw - 48px); overflow: hidden; text-overflow: ellipsis; opacity: 0; transform: translateY(4px); transition: opacity 0.12s, transform 0.12s; pointer-events: none; }
+.bar-row:hover .tip, .bar-row:focus-visible .tip { opacity: 1; transform: none; }
+.bar-row:hover .bar, .bar-row:focus-visible .bar { background: var(--sc-mid); }
+.chart-note { font-size: 0.82rem; color: var(--muted); }
+
+/* stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tile .lab { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.tile .val { font-family: var(--font-display); font-weight: 800; font-size: 1.45rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile p { font-size: 0.82rem; color: var(--muted); }
+
+/* tables */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 0.92rem; }
+th, td { text-align: left; padding: 10px 14px; vertical-align: top; border-top: 1px solid var(--line); }
+thead th { border-top: 0; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+td.k { font-weight: 600; white-space: nowrap; }
+td.t { width: 1%; white-space: nowrap; color: var(--sc); }
+
+.news { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.news li { padding: 12px 0 12px 18px; border-top: 1px solid var(--line); position: relative; }
+.news li:first-child { border-top: 0; padding-top: 0; }
+.news li::before { content: ""; position: absolute; left: 2px; top: 21px; width: 7px; height: 7px; border-radius: 50%; background: var(--sc); }
+.news li:first-child::before { top: 9px; }
+.news li p { font-size: 0.95rem; }
+.news .src { display: block; margin-top: 3px; }
+
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; display: flex; flex-direction: column; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+.steps li:first-child { border-top: 0; padding-top: 0; }
+.steps li::before { content: counter(step); font-family: var(--font-mono); font-weight: 600; font-size: 0.9rem; color: var(--sc); width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--sc); display: grid; place-items: center; }
+.steps p { font-size: 0.95rem; }
+
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.two .panel { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.two ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; font-size: 0.92rem; }
+.two h3 { font-size: 0.95rem; }
+
+.terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin: 0; }
+.terms div { padding: 12px 0; border-top: 1px solid var(--line); min-width: 0; }
+.terms dt { font-weight: 600; }
+.terms dd { margin: 2px 0 0; color: var(--muted); font-size: 0.92rem; }
+
+.callout { border-left: 3px solid var(--sc); padding: 4px 0 4px 14px; font-size: 0.95rem; }
+.disclose { background: var(--sc-soft); border: 1px solid var(--sc-mid); border-radius: 10px; padding: 14px 16px; font-size: 0.95rem; }
+
+.watch { display: grid; }
+.watch-row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.watch-row:first-child { border-top: 0; padding-top: 0; }
+.watch-row:last-child { padding-bottom: 0; }
+.when { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; color: var(--sc); padding-top: 2px; }
+.watch-row p { font-size: 0.95rem; }
+
+/* quiz */
+.quiz { display: flex; flex-direction: column; gap: 14px; }
+.score { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.score strong { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.reset { font: 600 0.82rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.q-text { font-weight: 600; }
+.opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.opts button { text-align: left; font: 500 0.9rem/1.4 var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; min-width: 0; }
+.opts button:hover:not(:disabled) { border-color: var(--sc); }
+.opts button:disabled { cursor: default; }
+.opts button.right { background: var(--right-bg); border-color: var(--up); }
+.opts button.wrong { background: var(--wrong-bg); border-color: var(--down); }
+.opts button.right::after { content: "  ✓ correct"; color: var(--up); font-weight: 600; font-size: 0.8rem; }
+.opts button.wrong::after { content: "  ✗ your pick"; color: var(--down); font-weight: 600; font-size: 0.8rem; }
+.explain { font-size: 0.92rem; color: var(--muted); border-left: 2px solid var(--sc); padding-left: 12px; }
+
+.prompts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.prompts li { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 10px 10px 16px; }
+.prompts .prompt-text { flex: 1; min-width: 0; font-size: 0.93rem; }
+.prompts button { flex: none; font: 600 0.8rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+
+footer { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; }
+footer p { max-width: 75ch; }
+
+@media (max-width: 600px) {
+  .wrap { padding-block: 28px 48px; gap: 44px; }
+  .terms, .two, .opts { grid-template-columns: minmax(0, 1fr); }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .watch-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .panel { padding: 16px; }
+}
+@media (max-width: 360px) { .tiles { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } html { scroll-behavior: auto; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+
+<header class="intro">
+  <span class="tag"><span class="dot"></span>Sector 5 · Deep dive · as of Nov 16, 2026</span>
+  <h1>Tesla and this month's hot topics</h1>
+  <p class="lede">Why Tesla is priced on robots instead of cars, how the Anthropic IPO works, which story stocks are hot and which have cooled, and the rising interest rates that sit underneath all of it.</p>
+  <nav class="parts" aria-label="Parts">
+    <a href="#tesla"><span>A</span>Tesla</a>
+    <a href="#ipo"><span>B</span>Anthropic IPO</a>
+    <a href="#themes"><span>C</span>Other hot themes</a>
+    <a href="#rates"><span>D</span>Rates &amp; the backdrop</a>
+  </nav>
+</header>
+
+<section>
+  <div class="block"><span class="eyebrow">If you only read one part</span><h2>The short version</h2></div>
+  <ul class="short">
+    <li><strong>Tesla's car business is flat; its stock is a bet on what comes next.</strong> Last quarter revenue was flat and the operating margin was 2.6%. The value rests on robotaxis, Optimus robots and a possible merger with SpaceX.</li>
+    <li><strong>Anthropic goes public this week</strong>, raising up to about $64 billion at a value of up to about $1.4 trillion. It's a live example of how an IPO works.</li>
+    <li><strong>Story stocks are cooling.</strong> Quantum, nuclear and robot companies have big stories and small revenue. Several are down 60% or more this year.</li>
+    <li><strong>Interest rates are going up, not down.</strong> The Fed hiked in September and is expected to hike again on Dec 9. The 10-year yield is above 5%. That's the headwind for every expensive stock on this page.</li>
+  </ul>
+</section>
+
+<!-- ================= PART A: TESLA ================= -->
+<section id="tesla">
+  <div class="part-head"><span class="eyebrow">Part A</span><h2>Tesla <span class="tk" style="color:var(--sc);font-size:0.6em">TSLA</span></h2></div>
+
+  <div class="panel chart">
+    <div class="chart-title">
+      <h3>Where Tesla's revenue comes from today</h3>
+      <span class="src">Jul–Sep 2026 quarter, US dollars. Total $28.05B, flat from a year earlier.</span>
+    </div>
+    <div class="bars" role="list">
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="Automotive, 20.56 billion dollars, 73 percent, down 3 percent">
+        <div class="bar-track"><div class="bar" style="width:93.5%"></div></div><span class="bar-val">$20.56B</span>
+        <span class="bar-label">Cars · 73%</span>
+        <span class="tip">Down 3% from a year earlier</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="Services and other, 4.61 billion dollars, 16 percent, up 33 percent">
+        <div class="bar-track"><div class="bar" style="width:21.0%"></div></div><span class="bar-val">$4.61B</span>
+        <span class="bar-label">Services &amp; other · 16%</span>
+        <span class="tip">Up 33% · repairs, charging, insurance, used cars</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="Energy, 2.88 billion dollars, 10 percent, down 16 percent">
+        <div class="bar-track"><div class="bar" style="width:13.1%"></div></div><span class="bar-val">$2.88B</span>
+        <span class="bar-label">Energy · 10%</span>
+        <span class="tip">Down 16% · home and grid batteries</span>
+      </div>
+    </div>
+    <p class="chart-note">Robotaxi and Optimus don't show up as revenue lines yet. Almost everything investors are excited about is still in the future.</p>
+  </div>
+
+  <div class="two">
+    <div class="panel"><h3>What Tesla is today</h3><ul>
+      <li>486,532 cars delivered, down 2% from a year earlier</li>
+      <li>Operating margin of 2.6%, with operating income down 56%</li>
+      <li>Car gross margin of 18.1% without regulatory credits, up from 15.4%</li>
+      <li>13.7 GWh of batteries deployed, below the ~15.9 GWh expected</li>
+      <li>$45.4B of cash and investments</li>
+    </ul></div>
+    <div class="panel"><h3>What the stock is betting on</h3><ul>
+      <li>Robotaxi in 8 cities, with the Cybercab built for it</li>
+      <li>1.74M Full Self-Driving subscriptions, up 67%</li>
+      <li>Optimus robots, now on production lines in Fremont</li>
+      <li>A possible merger with SpaceX, which owns xAI</li>
+      <li>R&amp;D spending up 69% to $2.76B a quarter</li>
+    </ul></div>
+  </div>
+  <p class="src">Q3 figures: <a href="https://www.sec.gov/Archives/edgar/data/0001318605/000162828026066738/exhibit9914.htm">Tesla shareholder deck (SEC)</a> · <a href="https://electrek.co/2026/10/21/tesla-tsla-q3-2026-financial-results/">Electrek</a> · <a href="https://www.cnbc.com/2026/10/21/tesla-tsla-q3-2026-earnings-report.html">CNBC</a></p>
+
+  <div class="block">
+    <h3>What's happening now</h3>
+    <ul class="news">
+      <li><p><strong>Robotaxi is in 8 cities</strong>: Austin, Dallas, Fort Worth, Houston and San Antonio in Texas, plus Miami, Orlando and Tampa. Texas lists 1,302 registered Tesla self-driving vehicles (729 Model Ys and 573 Cybercabs) against Waymo's 1,297. Registrations aren't the same as cars on the road.</p>
+        <span class="src"><a href="https://www.teslaoracle.com/2026/11/09/after-fort-worth-tesla-launches-robotaxi-service-in-san-antonio-texas-today-nov-9-now-available-in-8-cities/">Tesla Oracle</a> · <a href="https://evxl.co/2026/11/11/tesla-passes-waymo-texas-robotaxi-registry-1302/">EVXL</a></span></li>
+      <li><p><strong>Waymo is the benchmark.</strong> Alphabet's robotaxi runs paid rides in 14 US cities and reported about 500,000 paid rides a week this spring. It's aiming for 1 million a week by year-end.</p>
+        <span class="src"><a href="https://techcrunch.com/2026/03/27/waymo-skyrocketing-ridership-in-one-chart/">TechCrunch</a> · <a href="https://startupfortune.com/waymo-now-runs-paid-robotaxis-in-14-cities-chasing-1-million-rides-a-week/">Startup Fortune</a></span></li>
+      <li><p><strong>Cybercab goes on sale, narrowly.</strong> Select Austin buyers can reportedly order one for $29,990 plus a required $299-a-month autonomy subscription, with deliveries in December. This comes from one report, and there's no public order page yet. Separately, Tesla will stop making the Cybertruck in 2027.</p>
+        <span class="src"><a href="https://www.forbes.com/sites/jonmarkman/2026/11/16/tesla-opens-cybercab-sales-at-29990-with-a-required-299-monthly-fee/">Forbes</a> · <a href="https://techcrunch.com/2026/11/06/tesla-will-stop-making-the-cybertruck-in-2027/">TechCrunch</a></span></li>
+      <li><p><strong>Optimus.</strong> Musk says Tesla will likely rent the robots rather than sell them. He estimates each costs about $30,000 to build, falling toward $20,000. Deliveries to outside companies are targeted around the end of 2027, which isn't a firm date.</p>
+        <span class="src"><a href="https://www.notateslaapp.com/news/4959/musk-tesla-will-rent-optimus-robots-instead-of-selling-them">Not a Tesla App</a></span></li>
+      <li><p><strong>Tesla and SpaceX may merge.</strong> On Oct 20 both boards formed special committees to study a combination. No terms exist, and shareholders would have to approve. Tesla already owns a small SpaceX stake from its earlier xAI investment, after SpaceX bought xAI in February.</p>
+        <span class="src"><a href="https://techcrunch.com/2026/10/20/spacex-and-tesla-boards-form-special-committees-to-review-merger/">TechCrunch</a> · <a href="https://teslanorth.com/2026/03/12/tesla-secures-stake-in-spacex-following-merger-with-xai/">Tesla North</a></span></li>
+      <li><p><strong>Musk's pay.</strong> His 2025 award is worth up to $1 trillion in 12 steps. The first step needs Tesla to reach a $2 trillion market value, which it hasn't.</p>
+        <span class="src"><a href="https://www.fool.com/investing/2026/09/15/elon-musks-1-trillion-pay-package-tesla-market-cap/">Motley Fool</a></span></li>
+    </ul>
+    <p class="callout"><strong>Why a 2.6% margin company is worth so much.</strong> The price reflects what investors expect Tesla to earn years from now if robotaxis and robots work at scale. That's why autonomy news moves the stock more than car sales, and why it swings so hard on any delay.</p>
+  </div>
+</section>
+
+<!-- ================= PART B: ANTHROPIC IPO ================= -->
+<section id="ipo">
+  <div class="part-head"><span class="eyebrow">Part B</span><h2>The Anthropic IPO <span class="tk" style="color:var(--sc);font-size:0.6em">ANT</span></h2></div>
+  <p class="disclose"><strong>Disclosure:</strong> Anthropic makes Claude, the AI that helped write these notes. This section sticks to reported facts and how IPOs work. Read other coverage before forming a view, and treat nothing here as a recommendation.</p>
+
+  <div class="block">
+    <h3>How an IPO works, using this one</h3>
+    <ol class="steps">
+      <li><p><strong>File the paperwork.</strong> The company files an S-1 with the SEC, disclosing its finances and risks. Anthropic's is public.</p></li>
+      <li><p><strong>Roadshow.</strong> Executives pitch big investors, and the banks set a price range: $70–78 a share here.</p></li>
+      <li><p><strong>Build the book.</strong> Investors place orders. Demand for this deal is reportedly several times the shares available.</p></li>
+      <li><p><strong>Price it.</strong> The night before trading, the company and banks set the final price. Expected Wednesday, Nov 18.</p></li>
+      <li><p><strong>First trade.</strong> The stock opens wherever buy and sell orders meet, often well above the IPO price for a popular deal. Expected Thursday, Nov 19.</p></li>
+      <li><p><strong>Lock-up ends.</strong> Insiders and early investors are barred from selling for a set period. When that ends, extra supply can weigh on the price.</p></li>
+    </ol>
+  </div>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Item</th><th>What's been reported</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Offering</td><td>825M Class A shares at $70–78 on Nasdaq, ticker ANT. Up to about $64B raised at the top of the range.</td></tr>
+      <tr><td class="k">Valuation</td><td>Up to about $1.4T counting all shares and convertible securities. Some outlets quote about $0.9–1.0T using shares outstanding only.</td></tr>
+      <tr><td class="k">Retail access</td><td>Up to 20% of shares set aside for individual investors through brokers.</td></tr>
+      <tr><td class="k">Side deal</td><td>$26B of non-voting shares sold at the IPO price to AMD, Broadcom, Google, Micron, Microsoft, Nvidia and TSMC.</td></tr>
+      <tr><td class="k">Revenue</td><td>$4.59B in all of 2025, then $33.24B in the first nine months of 2026. The company cites a run-rate of about $81B at the end of October.</td></tr>
+      <tr><td class="k">Loss</td><td>$104B for the nine months, mostly from accounting changes in the value of convertible notes rather than cash spent.</td></tr>
+      <tr><td class="k">Control</td><td>A founders' entity holds 50.1% of voting power through a single special share. Amazon's stake is capped at 12% with no board seat.</td></tr>
+      <tr><td class="k">Lock-up</td><td>Reports conflict: staggered releases starting within weeks, versus up to 180 days for most holders.</td></tr>
+      <tr><td class="k">Banks</td><td>Goldman Sachs and Morgan Stanley lead.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src"><a href="https://www.cnbc.com/2026/11/16/anthropic-ipo-date-price-range.html">CNBC, Nov 16</a> · <a href="https://www.cnbc.com/2026/11/10/anthropic-sets-price-range-of-70-to-78-in-upcoming-ipo.html">CNBC, Nov 10</a> · <a href="https://www.cnbc.com/2026/10/26/anthropic-ipo-live-updates-ai-s-1-filing.html">CNBC, Oct 26</a> · <a href="https://www.sec.gov/Archives/edgar/data/0002130357/000162828026067168/anthropicpbc-sx1.htm">S-1 filing</a> · <a href="https://stockanalysis.com/news/anthropic-ipo-multiple-times-oversubscribed/">Demand report</a></p>
+
+  <p class="callout"><strong>Three ideas this IPO teaches.</strong> <em>Run-rate</em> is recent revenue multiplied out to a year, so it shows pace, not a full year of results. <em>Dual-class control</em> means public buyers can own most of the shares while founders keep most of the votes. And the chip makers buying shares alongside the IPO are also Anthropic's suppliers, an example of the "circular" money flows some investors worry about in AI.</p>
+</section>
+
+<!-- ================= PART C: OTHER THEMES ================= -->
+<section id="themes">
+  <div class="part-head"><span class="eyebrow">Part C</span><h2>Other hot themes</h2></div>
+  <p>These are often called <strong>story stocks</strong>: the price is mostly about a future that hasn't arrived. They can double on good news and halve on a delay. Compare each story with the revenue next to it.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Theme</th><th>Ticker</th><th>The latest</th></tr></thead>
+    <tbody>
+      <tr><td class="k">SpaceX</td><td class="t tk">SPCX</td><td>Listed June 12 at $135, raising a record $86B, and closed $161.11 on day one. Reportedly near $142 on Nov 9, with an insider lock-up ending around Dec 8.</td></tr>
+      <tr><td class="k">OpenAI</td><td class="t">Private</td><td>Filed confidentially for an IPO in June. No date set; 2027 is the common guess.</td></tr>
+      <tr><td class="k">Quantum computing</td><td class="t tk">IONQ · RGTI · QBTS</td><td>IonQ's quarterly revenue jumped 336% to $173.8M. Rigetti's fell to $1.41M and D-Wave's bookings dropped 19%. All three fell today.</td></tr>
+      <tr><td class="k">Space</td><td class="t tk">RKLB</td><td>Rocket Lab revenue up 73% to $268M with a ~$3.6B backlog. Its big Neutron rocket slipped to 2027 at the earliest.</td></tr>
+      <tr><td class="k">Humanoid robots</td><td class="t tk">AGLT</td><td>Agility Robotics went public Nov 5 through a SPAC at a $2.5B value. It had $1.8M of revenue and a $138M loss in 2025.</td></tr>
+      <tr><td class="k">Small nuclear</td><td class="t tk">OKLO · SMR</td><td>Oklo jumped about 20% on Nov 6 on a smaller loss but is down ~68% this year. NuScale had $0.28M of quarterly revenue and is down ~66%.</td></tr>
+      <tr><td class="k">AI software</td><td class="t tk">PLTR</td><td>Palantir revenue up 96% to $2.31B, with ~$8.53B expected for the year. Shares slipped about 3% on the report.</td></tr>
+      <tr><td class="k">Bitcoin</td><td class="t tk">COIN · MSTR</td><td>Bitcoin is near $64,800 after dipping to ~$62,000. Strategy paid an average of $75,452 per coin, so it's under water, and it was dropped from an MSCI index.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src"><a href="https://www.cnbc.com/2026/06/12/spacex-ipo-spcx-live-updates.html">CNBC (SpaceX)</a> · <a href="https://quantral.com/blog/spacex-ipo">Quantral</a> · <a href="https://www.aljazeera.com/economy/2026/6/8/tech-giant-openai-files-for-us-initial-public-offering">Al Jazeera (OpenAI)</a> · <a href="https://247wallst.com/investing/2026/11/06/ionq-surges-18-on-beat-and-raised-guidance-rigetti-computing-jumps-18-d-wave-quantum-surges-16/">24/7 Wall St. (quantum)</a> · <a href="https://www.sec.gov/Archives/edgar/data/0001819994/000181999426000073/rklb-11092026ex991.htm">Rocket Lab (SEC)</a> · <a href="https://www.forbes.com/sites/jonmarkman/2026/11/05/humanoid-maker-agility-robotics-goes-public-on-18-million-of-2025-sales/">Forbes (Agility)</a> · <a href="https://247wallst.com/investing/2026/11/06/oklo-jumps-19-on-narrower-than-expected-loss-as-nuclear-stocks-rebound-nuscale-power-surges-15-nano-nuclear-energy-jumps-9/">24/7 Wall St. (nuclear)</a> · <a href="https://www.cnbc.com/2026/11/02/palantir-pltr-earnings-q3-2026.html">CNBC (Palantir)</a> · <a href="https://fred.stlouisfed.org/series/CBBTCUSD">FRED (bitcoin)</a> · <a href="https://finance.yahoo.com/markets/stocks/articles/michael-saylor-strategy-just-lost-172850606.html">Yahoo (Strategy)</a></p>
+  <p class="callout"><strong>What's a SPAC?</strong> A "blank check" company that lists on the stock market first, then merges with a private company to take it public. It's faster than a normal IPO, with less scrutiny, and many SPAC deals have done poorly afterward.</p>
+</section>
+
+<!-- ================= PART D: RATES ================= -->
+<section id="rates">
+  <div class="part-head"><span class="eyebrow">Part D</span><h2>Rates and the backdrop</h2></div>
+  <div class="tiles">
+    <div class="tile"><span class="lab">Fed funds rate</span><span class="val">3.75–4.00%</span><p>Raised in September, held Oct 28</p></div>
+    <div class="tile"><span class="lab">10-year Treasury</span><span class="val">5.15%</span><p>Close on Nov 13; 2026 high 5.31%</p></div>
+    <div class="tile"><span class="lab">Dec 9 hike odds</span><span class="val">~100%</span><p>~85% for +0.25, ~15% for +0.50</p></div>
+    <div class="tile"><span class="lab">Core inflation</span><span class="val">+0.3%/mo</span><p>Third month in a row (October CPI)</p></div>
+    <div class="tile"><span class="lab">Oil</span><span class="val">$87 / $94</span><p>WTI / Brent on Nov 16</p></div>
+    <div class="tile"><span class="lab">Nasdaq 100 today</span><span class="val dn">−2.7%</span><p>Third straight down day</p></div>
+  </div>
+  <p class="src"><a href="https://www.federalreserve.gov/monetarypolicy/files/monetary20261028a1.pdf">Federal Reserve</a> · <a href="https://www.cnbc.com/2026/11/13/treasury-yields-fed-rates.html">CNBC (yields)</a> · <a href="https://www.cbsnews.com/news/october-cpi-report-elevated-inflation/">CBS (CPI, odds)</a> · <a href="https://www.rte.ie/news/business/2026/1116/1599343-oil-prices/">RTÉ (oil)</a> · <a href="https://www.bloomberg.com/news/articles/2026-11-16/nasdaq-100-plunges-as-nvidia-earnings-anthropic-ipo-on-horizon">Bloomberg (Nasdaq)</a></p>
+
+  <div class="prose">
+    <p><strong>Why rates matter so much for this page.</strong> A stock's price is roughly what investors think its future profits are worth today. When safe government bonds pay 5%, money far in the future is worth less in comparison. That hits companies whose profits are mostly in the future hardest: Tesla, new IPOs, and every story stock above. Higher rates also raise borrowing costs for capital-hungry builders.</p>
+  </div>
+
+  <ul class="news">
+    <li><p><strong>The Fed is fighting inflation again.</strong> It raised rates in September for the first time since 2023 and held in October, with two officials voting for another hike. After October's hot inflation report, markets treat a Dec 9 hike as near-certain, and Governor Waller has floated a bigger half-point move. Kevin Warsh is Fed Chair.</p>
+      <span class="src"><a href="https://www.foxbusiness.com/economy/federal-reserve-interest-rate-decision-october-28-2026">Fox Business</a> · <a href="https://www.forbes.com/sites/simonmoore/2026/11/13/waller-floats-prospect-of-larger-december-interest-rate-hike/">Forbes</a></p></li>
+    <li><p><strong>A quirk in the inflation numbers.</strong> There is no year-over-year inflation figure for October. October 2025 data was never collected during last year's government shutdown, so there's nothing to compare against. Watch the monthly changes instead.</p>
+      <span class="src"><a href="https://www.cbsnews.com/news/october-cpi-report-elevated-inflation/">CBS News</a></span></li>
+    <li><p><strong>Oil is up on war.</strong> Fighting involving Iran and disruption around the Strait of Hormuz pushed energy prices higher. OPEC+ meets Nov 29.</p>
+      <span class="src"><a href="https://www.rte.ie/news/business/2026/1116/1599343-oil-prices/">RTÉ</a></span></li>
+    <li><p><strong>Midterms: Democrats won the House and Senate.</strong> Stocks rose more than 1% the next day, big tech gained, and neoclouds like CoreWeave fell more than 7%. The 10-year yield briefly dipped toward 4.9%, since divided government tends to limit new deficit spending, then climbed back above 5% after the inflation report.</p>
+      <span class="src"><a href="https://www.cnbc.com/2026/11/04/stock-market-rally-trump-midterms.html">CNBC</a> · <a href="https://www.cnbc.com/2026/11/03/treasury-yields-fall-as-democrats-win-big-in-us-midterm-elections.html">CNBC (yields)</a></span></li>
+  </ul>
+</section>
+
+<section id="watch">
+  <div class="block"><span class="eyebrow">Dates that will move this sector</span><h2>What to watch</h2></div>
+  <div class="panel watch">
+    <div class="watch-row"><span class="when">Nov 17</span><p><strong>Nvidia earnings</strong>, the backdrop for every AI-linked story stock.</p></div>
+    <div class="watch-row"><span class="when">Nov 18–19</span><p><strong>Anthropic prices and begins trading.</strong> Compare the final price with the $70–78 range, then the opening trade with the final price.</p></div>
+    <div class="watch-row"><span class="when">Nov 29</span><p><strong>OPEC+ meeting</strong> on oil output.</p></div>
+    <div class="watch-row"><span class="when">~Dec 8</span><p><strong>SpaceX insider lock-up ends</strong> (single-source date).</p></div>
+    <div class="watch-row"><span class="when">Dec 9</span><p><strong>Fed decision.</strong> A quarter-point hike is expected; a half point would be a shock.</p></div>
+    <div class="watch-row"><span class="when">Early Jan</span><p><strong>Tesla's Q4 deliveries</strong>, plus any robotaxi expansion or merger news.</p></div>
+  </div>
+</section>
+
+<section id="terms">
+  <div class="block"><span class="eyebrow">Reference</span><h2>Words in this sector</h2></div>
+  <dl class="terms">
+    <div><dt>Deliveries</dt><dd>Cars handed to customers in a quarter. Tesla reports them a few days after each quarter ends, before full earnings.</dd></div>
+    <div><dt>Regulatory credits</dt><dd>Payments other carmakers make to Tesla to meet emissions rules. Pure profit, but shrinking.</dd></div>
+    <div><dt>Run-rate</dt><dd>Recent revenue multiplied out to a full year. Shows pace, not results.</dd></div>
+    <div><dt>Dual-class shares</dt><dd>Share classes with different voting power, letting founders keep control.</dd></div>
+    <div><dt>Lock-up</dt><dd>A period after an IPO when insiders can't sell.</dd></div>
+    <div><dt>Basis point (bp)</dt><dd>One hundredth of a percent. A 25bp hike raises rates by 0.25%.</dd></div>
+    <div><dt>Core CPI</dt><dd>Consumer inflation without food and energy, which jump around. The Fed watches it closely.</dd></div>
+    <div><dt>Bond yield</dt><dd>The interest a bond pays at today's price. When yields rise, bond prices fall and stocks usually face pressure.</dd></div>
+  </dl>
+</section>
+
+<section id="quiz">
+  <div class="block"><span class="eyebrow">Check yourself</span><h2>Seven-question quiz</h2></div>
+  <div class="quiz">
+    <div class="score"><span>Score: <strong id="score">0 of 7</strong> answered correctly</span><button type="button" class="reset" id="quiz-reset">Start over</button></div>
+
+    <div class="q" data-answer="a">
+      <p class="q-text">1. Where does most of Tesla's revenue come from today?</p>
+      <div class="opts"><button type="button" data-k="a">Selling cars</button><button type="button" data-k="b">Robotaxi rides</button><button type="button" data-k="c">Optimus robots</button><button type="button" data-k="d">Batteries for the grid</button></div>
+      <p class="explain" hidden>Cars are about 73% of revenue. Robotaxi and Optimus don't appear as revenue lines yet.</p>
+    </div>
+
+    <div class="q" data-answer="c">
+      <p class="q-text">2. Tesla's operating margin was 2.6%. Why is it still valued far above other carmakers?</p>
+      <div class="opts"><button type="button" data-k="a">It sells the most cars in the world</button><button type="button" data-k="b">Its margin is the highest in the industry</button><button type="button" data-k="c">Investors are paying for robotaxis and robots that may come later</button><button type="button" data-k="d">It pays a large dividend</button></div>
+      <p class="explain" hidden>The valuation is mostly about expected future businesses, which is why autonomy news moves the stock more than car sales.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">3. Anthropic cites a run-rate of about $81B. What does run-rate mean?</p>
+      <div class="opts"><button type="button" data-k="a">Revenue for the past full year</button><button type="button" data-k="b">Recent revenue multiplied out to a year</button><button type="button" data-k="c">Expected revenue next year</button><button type="button" data-k="d">Total money raised so far</button></div>
+      <p class="explain" hidden>Run-rate takes a recent period and annualizes it. It shows the current pace, which can change quickly.</p>
+    </div>
+
+    <div class="q" data-answer="d">
+      <p class="q-text">4. Anthropic's founders hold 50.1% of the votes through one special share. What does that mean for public shareholders?</p>
+      <div class="opts"><button type="button" data-k="a">They get double dividends</button><button type="button" data-k="b">They can't sell for a year</button><button type="button" data-k="c">They control the board</button><button type="button" data-k="d">They can own lots of shares but can't outvote the founders</button></div>
+      <p class="explain" hidden>Dual-class structures separate ownership from control. Google and Meta use similar setups.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">5. What is an IPO lock-up?</p>
+      <div class="opts"><button type="button" data-k="a">A ban on short selling</button><button type="button" data-k="b">A period when insiders can't sell their shares</button><button type="button" data-k="c">A pause in trading on the first day</button><button type="button" data-k="d">A minimum price for the stock</button></div>
+      <p class="explain" hidden>When a lock-up ends, insiders can sell, adding supply. Stocks often wobble around those dates.</p>
+    </div>
+
+    <div class="q" data-answer="a">
+      <p class="q-text">6. Why does a hot inflation report tend to hurt high-growth tech stocks?</p>
+      <div class="opts"><button type="button" data-k="a">It makes rate hikes likelier, so future profits are worth less today</button><button type="button" data-k="b">Tech companies can't raise prices</button><button type="button" data-k="c">It makes chips more expensive</button><button type="button" data-k="d">It doesn't; inflation helps growth stocks</button></div>
+      <p class="explain" hidden>Higher yields shrink the present value of far-off profits. Companies whose profits lie mostly in the future feel it most.</p>
+    </div>
+
+    <div class="q" data-answer="c">
+      <p class="q-text">7. Agility Robotics went public through a SPAC. What is a SPAC?</p>
+      <div class="opts"><button type="button" data-k="a">A government loan program</button><button type="button" data-k="b">A type of index fund</button><button type="button" data-k="c">A listed shell company that merges with a private one to take it public</button><button type="button" data-k="d">A stock split</button></div>
+      <p class="explain" hidden>SPACs are faster than a traditional IPO, with less scrutiny, and many have performed poorly after the merger.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="block"><span class="eyebrow">Keep going</span><h2>Questions to ask Claude next</h2></div>
+  <ul class="prompts">
+    <li><span class="prompt-text">Anthropic just priced. Explain the final price, the first trade and what they mean.</span><button type="button" id="cp1" data-copy>Copy</button></li>
+    <li><span class="prompt-text">What would a Tesla–SpaceX merger mean for Tesla shareholders?</span><button type="button" id="cp2" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Compare Tesla's robotaxi with Waymo in plain English.</span><button type="button" id="cp3" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Explain how a Fed rate hike moves stocks and bonds, step by step.</span><button type="button" id="cp4" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Quiz me harder on Tesla and rates.</span><button type="button" id="cp5" data-copy>Copy</button></li>
+  </ul>
+</section>
+
+<footer>
+  <p><strong>Where this comes from.</strong> Company filings, the Federal Reserve and news reports gathered on Nov 16, 2026, linked next to each item. Some figures rest on a single report and are marked that way. Prices change daily.</p>
+  <p><strong>Not investment advice.</strong> This page explains companies and markets. It doesn't recommend buying or selling anything, including in the Anthropic IPO. Anthropic makes Claude, which helped write this page.</p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var total = document.querySelectorAll('.q').length;
+  var scoreEl = document.getElementById('score');
+  function updateScore() { scoreEl.textContent = document.querySelectorAll('.q[data-result="right"]').length + ' of ' + total; }
+  document.querySelectorAll('.q').forEach(function (q) {
+    var answer = q.getAttribute('data-answer');
+    q.querySelectorAll('.opts button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (q.hasAttribute('data-result')) return;
+        var pick = btn.getAttribute('data-k');
+        q.querySelectorAll('.opts button').forEach(function (b) { b.disabled = true; if (b.getAttribute('data-k') === answer) b.classList.add('right'); });
+        if (pick !== answer) btn.classList.add('wrong');
+        q.setAttribute('data-result', pick === answer ? 'right' : 'wrong');
+        q.querySelector('.explain').hidden = false;
+        updateScore();
+      });
+    });
+  });
+  document.getElementById('quiz-reset').addEventListener('click', function () {
+    document.querySelectorAll('.q').forEach(function (q) {
+      q.removeAttribute('data-result'); q.querySelector('.explain').hidden = true;
+      q.querySelectorAll('.opts button').forEach(function (b) { b.disabled = false; b.classList.remove('right', 'wrong'); });
+    });
+    updateScore();
+  });
+  document.querySelectorAll('[data-copy]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var el = btn.parentElement.querySelector('.prompt-text'); var text = el.textContent.trim();
+      function done(label) { btn.textContent = label; setTimeout(function () { btn.textContent = 'Copy'; }, 1600); }
+      function fallback() { try { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); done('Selected'); } catch (e) { done('Copy failed'); } }
+      try { navigator.clipboard.writeText(text).then(function () { done('Copied'); }, fallback); } catch (e) { fallback(); }
+    });
+  });
+})();
+</script>
