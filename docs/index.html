@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Learning notes on five market sectors, updated as news happens.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b47cf'/%3E%3Cpath d='M7 23V9h3.2l5.8 8.2L21.8 9H25v14h-3.2v-8.4L16 22.4l-5.8-7.8V23z' fill='white'/%3E%3C/svg%3E">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>Market Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: the collection's front page; one ~800px column: header, start-here card, the five sector notes as a list, upcoming dates, update log. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #151820;
+  --muted: #586070;
+  --line: #dde1e8;
+  --accent: #2b47cf;
+  --accent-soft: #e8ecfb;
+  --c1: #5a46d6; --c2: #9a5a08; --c3: #ad2d6b; --c4: #0c7a71; --c5: #bf3f2b;
+  --new: #17783f; --new-bg: #e4f4ea;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+    --accent: #93a6ff; --accent-soft: #1c2340;
+    --c1: #ab9cff; --c2: #f0b259; --c3: #f27ab4; --c4: #52d0c3; --c5: #ff8b74;
+    --new: #5fd98f; --new-bg: #143222;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+  --accent: #93a6ff; --accent-soft: #1c2340;
+  --c1: #ab9cff; --c2: #f0b259; --c3: #f27ab4; --c4: #52d0c3; --c5: #ff8b74;
+  --new: #5fd98f; --new-bg: #143222;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.wrap {
+  max-width: 800px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+  display: flex; flex-direction: column; gap: 48px;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.3rem, 7vw, 3.4rem); font-weight: 800; letter-spacing: -0.025em; }
+h2 { font-size: 1.35rem; font-weight: 800; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 1.12rem; }
+.notes { display: flex; flex-wrap: wrap; gap: 8px; }
+.note { font-size: 0.8rem; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface); }
+header { display: flex; flex-direction: column; gap: 14px; }
+.block { display: flex; flex-direction: column; gap: 14px; }
+
+.start {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 20px; align-items: center;
+  background: var(--accent-soft); border: 1px solid var(--line); border-radius: 14px; padding: 22px; text-decoration: none; color: var(--fg);
+}
+.start:hover { border-color: var(--accent); }
+.start .eyebrow { color: var(--accent); }
+.start strong { font-family: var(--font-display); font-size: 1.35rem; display: block; margin: 2px 0 4px; }
+.start p { color: var(--muted); font-size: 0.95rem; }
+.start .go { font-weight: 600; color: var(--accent); white-space: nowrap; }
+
+.list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.item {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 4px 14px; align-items: start;
+  padding: 16px 18px; border-top: 1px solid var(--line); color: var(--fg); text-decoration: none;
+}
+.item:first-child { border-top: 0; }
+a.item:hover { background: var(--bg); }
+.num { font-family: var(--font-mono); font-weight: 600; font-size: 0.85rem; color: var(--sc); width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--sc); display: grid; place-items: center; }
+.item h3 { font-size: 1.08rem; }
+.item p { font-size: 0.9rem; color: var(--muted); margin-top: 2px; }
+.pill { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600; padding: 3px 8px; border-radius: 999px; white-space: nowrap; margin-top: 3px; }
+.pill.new { color: var(--new); background: var(--new-bg); }
+.pill.soon { color: var(--muted); border: 1px solid var(--line); }
+.item.pending h3 { color: var(--muted); }
+.s1 { --sc: var(--c1); } .s2 { --sc: var(--c2); } .s3 { --sc: var(--c3); } .s4 { --sc: var(--c4); } .s5 { --sc: var(--c5); }
+
+.dates { display: flex; flex-direction: column; }
+.date-row { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.date-row:first-child { border-top: 0; padding-top: 0; }
+.when { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; color: var(--accent); padding-top: 1px; }
+.date-row p { font-size: 0.95rem; }
+
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.log li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 0.93rem; }
+.log li:first-child { border-top: 0; padding-top: 0; }
+.log time { font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); padding-top: 1px; }
+
+footer { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; }
+
+@media (max-width: 560px) {
+  .wrap { padding-block: 28px 48px; gap: 40px; }
+  .start { grid-template-columns: minmax(0, 1fr); padding: 18px; }
+  .item { grid-template-columns: 34px minmax(0, 1fr); }
+  .item .pill { grid-column: 2; justify-self: start; margin-top: 4px; }
+  .date-row, .log li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
+</style>
+<style>
+.site-nav { background: var(--surface); border-bottom: 1px solid var(--line); }
+.site-nav-in {
+  max-width: 800px; margin: 0 auto; box-sizing: border-box;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px;
+}
+.site-brand { font-family: "Archivo", "Helvetica Neue", Arial, sans-serif; font-weight: 800; font-size: 1rem; color: var(--fg); text-decoration: none; letter-spacing: -0.01em; }
+.site-links { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.86rem; }
+.site-links a { color: var(--muted); text-decoration: none; padding: 2px 0; }
+.site-links a:hover { color: var(--fg); text-decoration: underline; }
+.site-links a[aria-current="page"] { color: var(--fg); font-weight: 600; }
+</style>
+</head>
+<body>
+<nav class="site-nav" aria-label="Site"><div class="site-nav-in"><a class="site-brand" href="index.html" aria-current="page">Market Notes</a><div class="site-links"><a href="overview.html">Overview</a><a href="ai-chips.html">AI chips</a><a href="memory-power.html">Memory &amp; power</a></div></div></nav>
+
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">Last updated Monday, Nov 16, 2026</span>
+  <h1>Market Notes</h1>
+  <p class="lede">Plain-English notes on five market sectors, written for learning from zero and updated as news happens. Built with Claude from company filings and news reports.</p>
+  <div class="notes">
+    <span class="note">Sources linked on every page</span>
+    <span class="note">Educational, not investment advice</span>
+  </div>
+</header>
+
+<div class="block">
+  <span class="eyebrow">Start here</span>
+  <a class="start" href="overview.html">
+    <div>
+      <span class="eyebrow">Overview</span>
+      <strong>Five-Sector Field Guide</strong>
+      <p>What each sector does, the main companies, the words you'll hear, and this month's news. Read this first.</p>
+    </div>
+    <span class="go">Read →</span>
+  </a>
+</div>
+
+<div class="block">
+  <span class="eyebrow">Deep dives, one per sector</span>
+  <div class="list">
+    <a class="item s1" href="ai-chips.html">
+      <span class="num">1</span>
+      <div><h3>AI chips</h3><p>How AI chips work, the eight-step supply chain, who earns what, Nvidia vs. custom chips, and a checklist for Nvidia's earnings.</p></div>
+      <span class="pill new">New · Nov 16</span>
+    </a>
+    <a class="item s2" href="memory-power.html">
+      <span class="num">2</span>
+      <div><h3>Memory, data centers &amp; power</h3><p>The memory boom and its cycle, the math behind IREN's Microsoft deal, and why power became a bottleneck and a political fight.</p></div>
+      <span class="pill new">New · Nov 16</span>
+    </a>
+    <div class="item s3 pending">
+      <span class="num">3</span>
+      <div><h3>Games</h3><p>How game companies make money, the GTA VI launch, Roblox's rough year, Nintendo and the rest.</p></div>
+      <span class="pill soon">Coming next</span>
+    </div>
+    <div class="item s4 pending">
+      <span class="num">4</span>
+      <div><h3>Big Tech</h3><p>Where Microsoft, Alphabet, Amazon, Meta and Apple make their money, and whether AI spending pays off.</p></div>
+      <span class="pill soon">Coming next</span>
+    </div>
+    <div class="item s5 pending">
+      <span class="num">5</span>
+      <div><h3>Tesla &amp; hot topics</h3><p>Robotaxis and robots, the Anthropic IPO, interest rates and the market's other big themes.</p></div>
+      <span class="pill soon">Coming next</span>
+    </div>
+  </div>
+</div>
+
+<div class="block">
+  <span class="eyebrow">Dates that will move these sectors</span>
+  <div class="dates">
+    <div class="date-row"><span class="when">Tue Nov 17</span><p><strong>Nvidia earnings</strong> after the close. Sets the tone for chips, memory and Big Tech.</p></div>
+    <div class="date-row"><span class="when">Wed Nov 18</span><p><strong>Anthropic IPO</strong> expected to price.</p></div>
+    <div class="date-row"><span class="when">Thu Nov 19</span><p><strong>Anthropic (ANT)</strong> expected to start trading, and <strong>GTA VI</strong> launches.</p></div>
+    <div class="date-row"><span class="when">December</span><p><strong>Micron</strong> reports against its $61.5B forecast, and the <strong>Fed</strong> meets in mid-December.</p></div>
+    <div class="date-row"><span class="when">January 2027</span><p><strong>Texas's new governor and legislature</strong> take office, with data center rules on the agenda.</p></div>
+  </div>
+</div>
+
+<div class="block">
+  <span class="eyebrow">What changed</span>
+  <h2>Update log</h2>
+  <ul class="log">
+    <li><time datetime="2026-11-16">Nov 16, 2026</time><span>Site launched with the overview and deep dives on AI chips and on memory, data centers and power.</span></li>
+  </ul>
+</div>
+
+<footer>
+  <p><strong>Not investment advice.</strong> These notes explain how sectors work and what's in the news. They don't recommend buying or selling anything. Anthropic, which appears in these notes, makes Claude, which helped write them.</p>
+</footer>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,614 @@
+<title>Memory &amp; Power Deep Dive</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: same system as the Five-Sector Field Guide; one ~800px reading column in three parts (memory, data centers, power), sector-2 amber as the identifying color. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #151820;
+  --muted: #586070;
+  --line: #dde1e8;
+  --accent: #2b47cf;
+  --accent-soft: #e8ecfb;
+  --sc: #9a5a08;          /* sector 2 amber */
+  --sc-soft: #f8eddc;
+  --sc-mid: #f0dbb5;
+  --down: #b83a2c;
+  --up: #17783f;
+  --right-bg: #e4f4ea;
+  --wrong-bg: #fbe7e4;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+    --accent: #93a6ff; --accent-soft: #1c2340;
+    --sc: #f0b259; --sc-soft: #2d2314; --sc-mid: #4a381a;
+    --down: #f58a7d; --up: #5fd98f; --right-bg: #143222; --wrong-bg: #3a1c19;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+  --accent: #93a6ff; --accent-soft: #1c2340;
+  --sc: #f0b259; --sc-soft: #2d2314; --sc-mid: #4a381a;
+  --down: #f58a7d; --up: #5fd98f; --right-bg: #143222; --wrong-bg: #3a1c19;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.wrap {
+  max-width: 800px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+  display: flex; flex-direction: column; gap: 56px;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 6vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.5rem, 4.2vw, 2rem); font-weight: 800; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.tk { font-family: var(--font-mono); font-weight: 600; font-size: 0.86em; white-space: nowrap; }
+.src { font-size: 0.82rem; color: var(--muted); }
+.src a { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+.dn { color: var(--down); font-weight: 600; }
+.up { color: var(--up); font-weight: 600; }
+
+header.intro { display: flex; flex-direction: column; gap: 16px; }
+.back { font-size: 0.9rem; font-weight: 600; text-decoration: none; }
+.back:hover { text-decoration: underline; }
+.tag { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sc); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sc); flex: none; }
+.lede { font-size: 1.12rem; }
+nav.parts { display: flex; flex-wrap: wrap; gap: 8px; }
+nav.parts a { text-decoration: none; color: var(--fg); font-weight: 600; font-size: 0.9rem; padding: 7px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+nav.parts a span { font-family: var(--font-mono); color: var(--sc); margin-right: 6px; }
+nav.parts a:hover { border-color: var(--muted); }
+
+.part-head { display: flex; flex-direction: column; gap: 8px; padding-top: 28px; border-top: 3px solid var(--sc); }
+.part-head .eyebrow { color: var(--sc); font-weight: 600; }
+section { display: flex; flex-direction: column; gap: 18px; scroll-margin-top: 16px; }
+.block { display: flex; flex-direction: column; gap: 14px; }
+.prose { display: flex; flex-direction: column; gap: 12px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+
+.short { list-style: none; margin: 0; padding: 0; display: grid; }
+.short li { padding: 14px 0 14px 30px; border-top: 1px solid var(--line); position: relative; }
+.short li:first-child { border-top: 0; padding-top: 0; }
+.short li::before { content: ""; position: absolute; left: 4px; top: 22px; width: 12px; height: 2px; background: var(--sc); }
+.short li:first-child::before { top: 8px; }
+
+/* three kinds of memory */
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.kind { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.kind .lab { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--sc); }
+.kind strong { font-family: var(--font-display); font-size: 1.02rem; }
+.kind p { font-size: 0.87rem; color: var(--muted); }
+.kind.hl { background: var(--sc-soft); border-color: var(--sc-mid); }
+
+/* memory cycle */
+.cycle { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; counter-reset: c; }
+.cycle li { counter-increment: c; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; position: relative; }
+.cycle li::before { content: "Step " counter(c); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.cycle li strong { font-family: var(--font-display); font-size: 1.02rem; }
+.cycle li p { font-size: 0.87rem; color: var(--muted); }
+.cycle li.here { border: 2px solid var(--sc); background: var(--sc-soft); }
+.here-tag { align-self: flex-start; margin-top: 4px; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bg); background: var(--sc); border-radius: 4px; padding: 2px 7px; }
+.loop-note { font-size: 0.85rem; color: var(--muted); }
+
+/* bar charts */
+.chart { display: flex; flex-direction: column; gap: 12px; }
+.chart-title { display: flex; flex-direction: column; gap: 2px; }
+.chart-title h3 { font-size: 1rem; }
+.bars { display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--muted); }
+.bar-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 84px; align-items: center; gap: 10px; padding: 7px 0; }
+.bar-label { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.85rem; font-weight: 600; color: var(--fg); pointer-events: none; white-space: nowrap; }
+.bar-track { height: 28px; display: flex; align-items: center; }
+.bar { height: 100%; background: var(--sc-soft); border-right: 4px solid var(--sc); border-radius: 0 4px 4px 0; min-width: 4px; }
+.bar.forecast { background: repeating-linear-gradient(135deg, var(--sc-soft) 0 6px, var(--surface) 6px 10px); border-right-style: dashed; }
+.bar-val { font-family: var(--font-mono); font-weight: 600; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.tip { position: absolute; left: 10px; bottom: calc(100% - 4px); z-index: 2; background: var(--fg); color: var(--bg); font-size: 0.78rem; padding: 6px 9px; border-radius: 6px; white-space: nowrap; max-width: calc(100vw - 48px); overflow: hidden; text-overflow: ellipsis; opacity: 0; transform: translateY(4px); transition: opacity 0.12s, transform 0.12s; pointer-events: none; }
+.bar-row:hover .tip, .bar-row:focus-visible .tip { opacity: 1; transform: none; }
+.bar-row:hover .bar:not(.forecast), .bar-row:focus-visible .bar:not(.forecast) { background: var(--sc-mid); }
+.chart-note { font-size: 0.82rem; color: var(--muted); }
+
+/* tables */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 0.92rem; }
+th, td { text-align: left; padding: 10px 14px; vertical-align: top; border-top: 1px solid var(--line); }
+thead th { border-top: 0; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+td.t { width: 1%; white-space: nowrap; color: var(--sc); }
+td.n { white-space: nowrap; font-weight: 600; }
+
+/* lists */
+.news { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.news li { padding: 12px 0 12px 18px; border-top: 1px solid var(--line); position: relative; }
+.news li:first-child { border-top: 0; padding-top: 0; }
+.news li::before { content: ""; position: absolute; left: 2px; top: 21px; width: 7px; height: 7px; border-radius: 50%; background: var(--sc); }
+.news li:first-child::before { top: 9px; }
+.news li p { font-size: 0.95rem; }
+.news .src { display: block; margin-top: 3px; }
+
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; display: flex; flex-direction: column; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+.steps li:first-child { border-top: 0; padding-top: 0; }
+.steps li::before { content: counter(step); font-family: var(--font-mono); font-weight: 600; font-size: 0.9rem; color: var(--sc); width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--sc); display: grid; place-items: center; }
+.steps p { font-size: 0.95rem; }
+
+/* worked example */
+.calc { display: flex; flex-direction: column; gap: 0; }
+.calc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 10px 0; border-top: 1px solid var(--line); align-items: baseline; }
+.calc-row:first-of-type { border-top: 0; }
+.calc-row span:last-child { font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.calc-row.result { border-top: 2px solid var(--sc); margin-top: 4px; }
+.calc-row.result span:first-child { font-weight: 600; }
+.calc-row.result span:last-child { color: var(--sc); font-size: 1.05rem; }
+
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.two .panel { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.two ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; font-size: 0.92rem; }
+.two h3 { font-size: 0.95rem; }
+
+.terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin: 0; }
+.terms div { padding: 12px 0; border-top: 1px solid var(--line); min-width: 0; }
+.terms dt { font-weight: 600; }
+.terms dd { margin: 2px 0 0; color: var(--muted); font-size: 0.92rem; }
+
+.callout { border-left: 3px solid var(--sc); padding: 4px 0 4px 14px; font-size: 0.95rem; }
+
+.watch { display: grid; }
+.watch-row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.watch-row:first-child { border-top: 0; padding-top: 0; }
+.watch-row:last-child { padding-bottom: 0; }
+.when { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; color: var(--sc); padding-top: 2px; }
+.watch-row p { font-size: 0.95rem; }
+
+/* quiz */
+.quiz { display: flex; flex-direction: column; gap: 14px; }
+.score { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.score strong { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.reset { font: 600 0.82rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.q-text { font-weight: 600; }
+.opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.opts button { text-align: left; font: 500 0.9rem/1.4 var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; min-width: 0; }
+.opts button:hover:not(:disabled) { border-color: var(--sc); }
+.opts button:disabled { cursor: default; }
+.opts button.right { background: var(--right-bg); border-color: var(--up); }
+.opts button.wrong { background: var(--wrong-bg); border-color: var(--down); }
+.opts button.right::after { content: "  ✓ correct"; color: var(--up); font-weight: 600; font-size: 0.8rem; }
+.opts button.wrong::after { content: "  ✗ your pick"; color: var(--down); font-weight: 600; font-size: 0.8rem; }
+.explain { font-size: 0.92rem; color: var(--muted); border-left: 2px solid var(--sc); padding-left: 12px; }
+
+.prompts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.prompts li { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 10px 10px 16px; }
+.prompts .prompt-text { flex: 1; min-width: 0; font-size: 0.93rem; }
+.prompts button { flex: none; font: 600 0.8rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+
+footer { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; }
+footer p { max-width: 75ch; }
+
+@media (max-width: 720px) {
+  .cycle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .wrap { padding-block: 28px 48px; gap: 44px; }
+  .trio, .terms, .two, .opts { grid-template-columns: minmax(0, 1fr); }
+  .watch-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .panel { padding: 16px; }
+}
+@media (max-width: 380px) { .cycle { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } html { scroll-behavior: auto; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+
+<header class="intro">
+  <a class="back" href="https://claude.ai/artifact/Mq5pzCbhH5xSqJEqRew4Hj">← Five-Sector Field Guide</a>
+  <span class="tag"><span class="dot"></span>Sector 2 · Deep dive · as of Nov 16, 2026</span>
+  <h1>Memory, data centers and power, one layer deeper</h1>
+  <p class="lede">What an AI chip needs besides the chip. Why memory makers are earning record profits while their stocks fall, how a company like IREN turns electricity into GPU rentals, and why power became the bottleneck and then a political fight.</p>
+  <nav class="parts" aria-label="Parts">
+    <a href="#memory"><span>A</span>Memory</a>
+    <a href="#datacenters"><span>B</span>Data centers</a>
+    <a href="#power"><span>C</span>Power</a>
+    <a href="#watch"><span>→</span>What to watch</a>
+  </nav>
+</header>
+
+<section>
+  <div class="block">
+    <span class="eyebrow">If you only read one part</span>
+    <h2>The short version</h2>
+  </div>
+  <ul class="short">
+    <li><strong>Memory is in the biggest boom in its history.</strong> SK Hynix kept 80 cents of operating profit from every dollar of sales last quarter. Micron's quarterly revenue is nearly five times what it was a year ago.</li>
+    <li><strong>But memory has always been boom-and-bust.</strong> New factories land in 2027–29, and investors are already looking ahead to that, which is why the stocks fell 16–21% this month despite record profits.</li>
+    <li><strong>Neoclouds like IREN turn power and buildings into GPU rentals.</strong> They grow very fast, and they need enormous amounts of borrowed money to do it.</li>
+    <li><strong>Power is now the slowest piece.</strong> Gas turbines are sold into the early 2030s, and the biggest US grid auction keeps clearing at its price cap. After this month's elections, voters angry about electric bills put data-center skeptics in charge in Texas and other key states.</li>
+  </ul>
+</section>
+
+<!-- ================= PART A: MEMORY ================= -->
+<section id="memory">
+  <div class="part-head">
+    <span class="eyebrow">Part A</span>
+    <h2>Memory</h2>
+  </div>
+
+  <div class="trio">
+    <div class="kind"><span class="lab">Working memory</span><strong>DRAM</strong><p>Holds what a computer is using right now and forgets everything when the power goes off. In every phone, PC and server.</p></div>
+    <div class="kind hl"><span class="lab">AI memory</span><strong>HBM</strong><p>DRAM stacked 8 to 16 layers high, wired through tiny vertical holes, and placed right beside a GPU. Hard to make, very expensive.</p></div>
+    <div class="kind"><span class="lab">Storage</span><strong>NAND flash</strong><p>Keeps data with the power off. Used in SSDs and phone storage. Also booming, but less central to AI.</p></div>
+  </div>
+
+  <div class="prose">
+    <p><strong>Why HBM makes everything else scarce.</strong> The same factories make HBM and ordinary DRAM. HBM uses roughly three times as much silicon per unit of memory, so every wafer shifted to HBM removes much more ordinary memory from the market. TrendForce estimates HBM will take about 22% of DRAM wafers by the end of 2026 and about 30% by the end of 2027.</p>
+    <p><strong>The result:</strong> ordinary DRAM contract prices rose about 90–95% in a single quarter in early 2026, then kept climbing. Phone, PC and server makers pay more, and memory makers' profits explode.</p>
+  </div>
+  <p class="src"><a href="https://www.trendforce.com/presscenter/news/20260602-13074.html">TrendForce</a> · <a href="https://www.useluminix.com/reports/industry-analysis/dram-cycle-position-analysis-peak-timing-indicators">Luminix DRAM cycle report</a></p>
+
+  <div class="block">
+    <h3>The memory cycle, and where we are on it</h3>
+    <p>Memory chips are close to a commodity: one maker's DRAM can replace another's. So the industry swings through the same loop again and again.</p>
+    <ol class="cycle">
+      <li><strong>Shortage</strong><p>Demand outruns supply.</p></li>
+      <li><strong>Prices soar</strong><p>Profits explode. Memory stocks rally.</p></li>
+      <li class="here"><strong>Build</strong><p>Makers order new factories and equipment, which take two to three years.</p><span class="here-tag">We are here</span></li>
+      <li><strong>Flood</strong><p>New capacity from every maker arrives around the same time.</p></li>
+      <li><strong>Glut</strong><p>Prices crash and profits turn to losses.</p></li>
+      <li><strong>Cut</strong><p>Makers slash spending, supply shrinks, and the loop starts again.</p></li>
+    </ol>
+    <p class="loop-note">Stocks usually turn before profits do. Investors sell around step 3, while results still look great, because they are pricing in steps 4 and 5. Bulls argue AI changes this cycle: HBM is sold on multi-year contracts, and SK Hynix says it's sold out through 2029.</p>
+  </div>
+
+  <div class="block">
+    <h3>The three makers</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Ticker</th><th>Company</th><th>Position</th></tr></thead>
+      <tbody>
+        <tr><td class="t tk">SKHY · 000660</td><td class="n">SK Hynix</td><td>HBM leader with about 56% of HBM revenue in early 2026, and Nvidia's main supplier. Korean; listed US shares (SKHY) in 2026.</td></tr>
+        <tr><td class="t tk">005930</td><td class="n">Samsung</td><td>Largest memory maker overall. Was late to HBM and is now spending heavily to catch up. Trades in Seoul.</td></tr>
+        <tr><td class="t tk">MU</td><td class="n">Micron</td><td>The only US memory maker. Building new factories in Idaho and New York and an HBM packaging plant in Singapore.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="src">HBM share from IDC via <a href="https://www.sec.gov/Archives/edgar/data/0002120882/000119312526280172/d32785df1.htm">SK Hynix's US listing filing</a></p>
+  </div>
+
+  <div class="panel chart">
+    <div class="chart-title">
+      <h3>Micron's revenue per quarter</h3>
+      <span class="src">US dollars. Striped bar is the company's own forecast.</span>
+    </div>
+    <div class="bars" role="list">
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="June to August 2025, 11.3 billion dollars">
+        <div class="bar-track"><div class="bar" style="width:17.4%"></div></div><span class="bar-val">$11.3B</span>
+        <span class="bar-label">Jun–Aug 2025</span>
+        <span class="tip">A year earlier</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="June to August 2026, 54.2 billion dollars">
+        <div class="bar-track"><div class="bar" style="width:83.4%"></div></div><span class="bar-val">$54.2B</span>
+        <span class="bar-label">Jun–Aug 2026</span>
+        <span class="tip">Up 379% from a year earlier · reported Sep 2026</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="September to November 2026 forecast, 61.5 billion dollars">
+        <div class="bar-track"><div class="bar forecast" style="width:94.6%"></div></div><span class="bar-val">$61.5B</span>
+        <span class="bar-label">Sep–Nov 2026 · forecast</span>
+        <span class="tip">Micron's guidance · results due in December</span>
+      </div>
+    </div>
+    <p class="chart-note">Micron's fiscal quarters end in early September, December, March and June. Its full fiscal 2026 revenue was $133B, up from $37B the year before.</p>
+  </div>
+
+  <div class="block">
+    <h3>What's happening now</h3>
+    <ul class="news">
+      <li><p><strong>SK Hynix posted the best quarter in its history</strong> (Jul–Sep, reported Oct 27): revenue of ₩104.6 trillion (more than $70B) and operating profit of ₩83.3 trillion, an 80% margin. Profit was up about 632% from a year earlier and beat forecasts. It began mass-shipping HBM4, expects HBM4 to overtake the older HBM3E this quarter, and announced a ₩20 trillion buyback.</p>
+        <span class="src"><a href="https://www.morningstar.com/news/pr-newswire/20261027cn82191/sk-hynix-announces-3q26-financial-results">SK Hynix release</a> · <a href="https://www.cnbc.com/2026/10/28/sk-hynix-third-quarter-profit.html">CNBC</a> · <a href="https://finance.yahoo.com/markets/stocks/articles/sk-hynix-inc-skhy-q3-090247079.html">Call highlights</a></span></li>
+      <li><p><strong>Micron beat the top of its own forecast</strong> on revenue, margin and earnings for Jun–Aug, with HBM growing faster than the company overall.</p>
+        <span class="src"><a href="https://www.sec.gov/Archives/edgar/data/0000723125/000072312526000018/a2026q4ex991-pressrelease.htm">Micron release (SEC)</a> · <a href="https://www.investing.com/news/transcripts/earnings-call-transcript-micron-tops-q4-2026-estimates-as-demand-stays-hot-93CH-4925992">Call transcript</a></span></li>
+      <li><p><strong>The stocks fell anyway.</strong> Over the past month SK Hynix's US shares are down about <span class="dn">16%</span> and Micron about <span class="dn">21%</span>. Samsung's $34B HBM push and new plants from all three makers raise fears of a glut in 2028–29. That's the cycle in action.</p>
+        <span class="src"><a href="https://finance.yahoo.com/markets/stocks/articles/sk-hynix-down-16-month-190321820.html">Yahoo Finance</a> · <a href="https://247wallst.com/investing/2026/11/14/samsungs-34-billion-hbm-bet-raises-memory-glut-risks/">24/7 Wall St.</a></span></li>
+      <li><p><strong>A price-fixing lawsuit is going forward.</strong> On Nov 14 a US judge refused to dismiss a class action alleging the three makers cut ordinary DRAM output to push up prices.</p>
+        <span class="src"><a href="https://wccftech.com/federal-judge-rejects-memory-makers-defense-samsung-micron-sk-hynix-dram-shortage-lawsuit">Wccftech</a></span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= PART B: DATA CENTERS ================= -->
+<section id="datacenters">
+  <div class="part-head">
+    <span class="eyebrow">Part B</span>
+    <h2>Data centers and neoclouds</h2>
+  </div>
+  <div class="prose">
+    <p>A <strong>neocloud</strong> rents GPU computing to AI labs and Big Tech, separate from Amazon, Microsoft and Google's own clouds. Several started as bitcoin miners, because mining had already forced them to secure cheap power and big buildings, the two hardest things to get now. IREN, formerly Iris Energy, is one of them.</p>
+  </div>
+
+  <div class="block">
+    <h3>How a neocloud makes money</h3>
+    <ol class="steps">
+      <li><p><strong>Lock down land and a grid connection.</strong> This is now the slowest and most valuable step.</p></li>
+      <li><p><strong>Sign a multi-year contract</strong> with a big customer, ideally with money paid up front.</p></li>
+      <li><p><strong>Borrow against that contract</strong> to buy GPUs, usually billions of dollars.</p></li>
+      <li><p><strong>Build or fit out the data center</strong> with power, cooling and networking.</p></li>
+      <li><p><strong>Collect rent</strong> on the GPUs every month.</p></li>
+      <li><p><strong>Pay back the debt before the GPUs go stale.</strong> New chip generations arrive every year, so old GPUs lose value fast. This is the whole business's central risk.</p></li>
+    </ol>
+  </div>
+
+  <div class="panel">
+    <h3 style="margin-bottom:6px">Worked example: IREN's Microsoft contract</h3>
+    <p class="src" style="margin-bottom:10px">Simple arithmetic on publicly reported figures, to show the shape of the business. Not company projections.</p>
+    <div class="calc">
+      <div class="calc-row"><span>Contract value over 5 years</span><span>$9.7B</span></div>
+      <div class="calc-row"><span>Revenue per year ($9.7B ÷ 5)</span><span>≈ $1.94B</span></div>
+      <div class="calc-row"><span>Paid up front by Microsoft (20%)</span><span>≈ $1.9B</span></div>
+      <div class="calc-row"><span>GPUs and equipment bought from Dell</span><span>≈ $5.8B</span></div>
+      <div class="calc-row result"><span>Years of rent to cover the hardware ($5.8B ÷ $1.94B)</span><span>≈ 3 years</span></div>
+    </div>
+    <p style="margin-top:12px;font-size:0.92rem">That's before paying for electricity, the buildings, staff and interest. It leaves roughly two years of the contract to earn a profit, and the GPUs need to stay useful for all five.</p>
+    <p class="src" style="margin-top:6px"><a href="https://iren.gcs-web.com/news-releases/news-release-details/iren-secures-97bn-ai-cloud-contract-microsoft">IREN release, Nov 2025</a></p>
+  </div>
+
+  <div class="block">
+    <h3>Who's who</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Ticker</th><th>Company</th><th>What stands out</th></tr></thead>
+      <tbody>
+        <tr><td class="t tk">IREN</td><td class="n">IREN</td><td>Ex-bitcoin miner, now almost entirely AI cloud. Big Texas campuses: Childress, and a 2-gigawatt hub at Sweetwater. Microsoft is the anchor customer.</td></tr>
+        <tr><td class="t tk">CRWV</td><td class="n">CoreWeave</td><td>The largest neocloud, with a $132.5B order backlog and about $47B of debt.</td></tr>
+        <tr><td class="t tk">NBIS</td><td class="n">Nebius</td><td>Amsterdam-based neocloud listed on Nasdaq.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="block">
+    <h3>What's happening now</h3>
+    <ul class="news">
+      <li><p><strong>IREN's AI business nearly tripled in a quarter</strong> (Jul–Sep, reported Nov 5). AI cloud revenue was $200M of $228M total, as bitcoin mining winds down. Its annual run-rate reached $1B. Gross margin on AI cloud was 86%, but that's <em>before</em> depreciation, the cost of GPUs wearing out.</p>
+        <span class="src"><a href="https://www.stocktitan.net/news/IREN/iren-reports-q1-fy27-lc81x681t2tu.html">IREN results via StockTitan</a> · <a href="https://www.fool.com/earnings/call-transcripts/2026/11/06/iren-iren-q1-2027-earnings-call-transcript/">Call transcript</a></span></li>
+      <li><p><strong>IREN's next target slipped.</strong> The goal of a $4B+ annual run-rate moved from year-end 2026 to January 2027, possibly February. It spent about $5B on construction and equipment last quarter, plans about $15B more this fiscal year, and trimmed that plan because borrowing has gotten harder.</p>
+        <span class="src"><a href="https://www.gurufocus.com/news/9178594/iren-ltd-iren-q1-2027-earnings-call-highlights-ai-cloud-revenue-nearly-triples-to-200-million-as-operating-arr-hits-1-billion">GuruFocus</a> · <a href="https://456xresearch.substack.com/p/iren-q1-fy2027-deep-dive-ai-cloud">456X Research</a></span></li>
+      <li><p><strong>CoreWeave shows the model at scale</strong> (reported Nov 10). Revenue grew <span class="up">168%</span> to $3.66B and the stock jumped about 25%. But it lost $709M, spent $14.5B in one quarter, and its debt more than doubled this year. It says it won't issue new unsecured debt through 2027 at today's interest rates.</p>
+        <span class="src"><a href="https://www.implicator.ai/coreweave-reports-q3-revenue-up-168-yoy-3-66b-vs-3-55b-est/">Implicator</a> · <a href="https://www.webpronews.com/coreweave-q3-2026-earnings-raised-outlook-backlog-unsecured-debt">WebProNews</a></span></li>
+    </ul>
+    <p class="callout"><strong>Backlog isn't revenue yet.</strong> CoreWeave's $132.5B backlog is signed future business, but only about a quarter of it is expected to turn into revenue within two years. Bigger backlogs are good; the timing still matters.</p>
+  </div>
+</section>
+
+<!-- ================= PART C: POWER ================= -->
+<section id="power">
+  <div class="part-head">
+    <span class="eyebrow">Part C</span>
+    <h2>Power</h2>
+  </div>
+  <div class="prose">
+    <p><strong>How much power?</strong> One modern AI rack uses about as much electricity as 100 homes. A 1-gigawatt AI campus uses about the full output of a large nuclear reactor. US data centers used about 4.4% of the country's electricity in 2023, and Lawrence Berkeley National Lab projects 6.7–12% by 2028.</p>
+    <p><strong>Why it's a bottleneck.</strong> Chips can be built in months. Power plants, transmission lines and grid connections take years, and the equipment to build them is sold out.</p>
+  </div>
+
+  <div class="block">
+    <h3>Four ways to make money from AI's power needs</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Type</th><th>Examples</th><th>How they earn</th><th>What helps them</th></tr></thead>
+      <tbody>
+        <tr><td class="n">Power producers</td><td class="tk">VST · CEG · TLN · NRG</td><td>Own plants and sell electricity at market prices or under long contracts.</td><td>Scarce power and high prices</td></tr>
+        <tr><td class="n">Regulated utilities</td><td class="tk">D · SO · AEP</td><td>Own the local grid and earn a return that regulators approve on what they build.</td><td>More grid to build, if regulators allow it</td></tr>
+        <tr><td class="n">Equipment makers</td><td class="tk">GEV · VRT · ETN</td><td>Sell turbines, transformers, switchgear and cooling.</td><td>Everyone building at once</td></tr>
+        <tr><td class="n">Next-gen nuclear</td><td class="tk">OKLO · SMR</td><td>Small modular reactors, years away from real revenue.</td><td>Long-term contracts and policy support</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="panel chart">
+    <div class="chart-title">
+      <h3>What the biggest US grid pays power plants just to be available</h3>
+      <span class="src">PJM capacity auction price, dollars per megawatt per day, by delivery year (June to May)</span>
+    </div>
+    <div class="bars" role="list">
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="2024 to 2025, 28.92 dollars per megawatt-day">
+        <div class="bar-track"><div class="bar" style="width:8.3%"></div></div><span class="bar-val">$28.92</span>
+        <span class="bar-label">2024/25</span>
+        <span class="tip">Before the data center surge</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="2025 to 2026, 269.92 dollars per megawatt-day">
+        <div class="bar-track"><div class="bar" style="width:77.1%"></div></div><span class="bar-val">$269.92</span>
+        <span class="bar-label">2025/26</span>
+        <span class="tip">More than 9× the year before</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="2026 to 2027, 329.17 dollars per megawatt-day, at the price cap">
+        <div class="bar-track"><div class="bar" style="width:94.0%"></div></div><span class="bar-val">$329.17</span>
+        <span class="bar-label">2026/27 · at cap</span>
+        <span class="tip">Hit the price cap; later auctions did too</span>
+      </div>
+    </div>
+    <p class="chart-note">PJM runs the grid for 13 states plus DC, including Virginia, the world's largest data center market. The auctions for 2027/28 and 2028/29 also cleared at the cap of roughly $325–335.</p>
+  </div>
+
+  <div class="block">
+    <h3>What's happening now</h3>
+    <ul class="news">
+      <li><p><strong>The grid is short of power, even at capped prices.</strong> PJM's July 2026 auction fell 6,831 MW short of its reliability target, and only about 525 MW of new power plants signed up. Without the cap, prices would have been about $555. The grid's independent monitor attributes about 40% of the auction's cost to data centers.</p>
+        <span class="src"><a href="http://paenvironmentdaily.blogspot.com/2026/07/pjm-data-center-driven-power-auction.html">PA Environment Digest</a> · <a href="https://avanzaenergy.substack.com/p/the-164-billion-reliability-tax-how">Avanza Energy</a> · <a href="https://www.pjm.com/-/media/DotCom/markets-ops/rpm/rpm-auction-info/2026-2027/2026-2027-bra-report.pdf">PJM report</a></span></li>
+      <li><p><strong>Gas turbines are sold into the 2030s.</strong> GE Vernova (reported Oct 28) took about $29.3B of orders, up 96%, and its backlog hit $197B. It sold turbine slots for 2032 delivery, and its CEO said turbine prices are up about 50% from 2025.</p>
+        <span class="src"><a href="https://www.fool.com/earnings/call-transcripts/2026/10/28/ge-vernova-gev-q3-2026-earnings-call-transcript/">Call transcript</a> · <a href="https://www.turbomachinerymag.com/view/ge-vernova-q3-2026-gas-power-backlog-122-gw-trench-acquisition">Turbomachinery</a> · <a href="https://www.benzinga.com/trading-ideas/long-ideas/26/10/62663687/ge-vernova-gas-turbine-prices-50-percent-up-customers-2032">Benzinga</a></span></li>
+      <li><p><strong>Vistra had a record quarter</strong> (reported Nov 6). Adjusted EBITDA, a common profit measure for power companies, rose more than 50% to $2.38B, and it raised its 2026 outlook. It signed a 20-year deal to power a data center from its Odessa, Texas gas plant. Management also said Texas power prices have been trending lower as crypto miners convert to data centers.</p>
+        <span class="src"><a href="https://www.sec.gov/Archives/edgar/data/0001692819/000169281926000023/vistra-20260930xearningsre.htm">Vistra release (SEC)</a> · <a href="https://finance.yahoo.com/energy/articles/vistra-q3-earnings-call-highlights-061409505.html">Call highlights</a></span></li>
+      <li><p><strong>The midterms turned power into politics.</strong> Democrats ran on electricity bills and won governorships in Texas, Ohio, Georgia, Nevada and Iowa. Texas's governor-elect campaigned on a statewide data center moratorium. Campaigns spent more than $380M on TV ads mentioning data centers. Expect pressure for tech companies to pay more of the grid's costs. Vistra fell <span class="dn">15.4%</span> on the news, GE Vernova <span class="dn">11.5%</span> and Constellation <span class="dn">9.2%</span>.</p>
+        <span class="src"><a href="https://abcnews.com/Technology/wireStory/data-centers-beating-midterm-elections-reckoning-ahead-tech-137902293">ABC News</a> · <a href="https://bloomberg.com/news/articles/2026-11-14/tech-giants-face-more-grid-cost-pressure-on-democratic-sweep">Bloomberg</a> · <a href="https://finance.yahoo.com/energy/articles/ai-data-center-stocks-dip-113427491.html">Yahoo Finance</a></span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= WATCH + CASES ================= -->
+<section id="watch">
+  <div class="block">
+    <span class="eyebrow">Dates that will move this sector</span>
+    <h2>What to watch</h2>
+  </div>
+  <div class="panel watch">
+    <div class="watch-row"><span class="when">Nov 17</span><p><strong>Nvidia earnings.</strong> Its comments on the Vera Rubin ramp drive HBM4 demand for SK Hynix and Micron.</p></div>
+    <div class="watch-row"><span class="when">December</span><p><strong>Micron reports Sep–Nov results</strong> against its $61.5B forecast. The first hard read on whether memory prices are still rising.</p></div>
+    <div class="watch-row"><span class="when">January 2027</span><p><strong>Texas's new governor and legislature take office.</strong> Watch for data center moratorium or grid-cost bills. That matters for IREN, Vistra and every Texas campus. IREN's $4B run-rate target also comes due.</p></div>
+    <div class="watch-row"><span class="when">Late January</span><p><strong>SK Hynix and Samsung report Oct–Dec.</strong> Look for HBM4's share of shipments and any change in 2027–28 contract commitments.</p></div>
+  </div>
+
+  <div class="two">
+    <div class="panel"><h3>Bull case</h3><ul>
+      <li>HBM is sold years ahead on contracts, unlike past memory booms</li>
+      <li>Power and grid connections can't be built quickly, so existing assets gain value</li>
+      <li>Turbine prices up 50% shows real pricing power</li>
+      <li>Big Tech plans to spend even more in 2027</li>
+    </ul></div>
+    <div class="panel"><h3>Bear case</h3><ul>
+      <li>Every memory maker is adding capacity at once, the classic setup for a glut</li>
+      <li>Neoclouds carry huge debt against GPUs that age fast</li>
+      <li>Voters and new governors want data centers to pay more, or to slow down</li>
+      <li>One or two customers make up most of the revenue at several companies</li>
+      <li>High interest rates raise the cost of everything here, since it's all built on borrowed money</li>
+    </ul></div>
+  </div>
+</section>
+
+<section id="terms">
+  <div class="block"><span class="eyebrow">Reference</span><h2>Words in this sector</h2></div>
+  <dl class="terms">
+    <div><dt>Contract price</dt><dd>The price big buyers pay memory makers under supply agreements. The main gauge of the memory cycle.</dd></div>
+    <div><dt>Wafer input</dt><dd>How many silicon wafers a maker starts each month, and what share go to HBM versus ordinary DRAM.</dd></div>
+    <div><dt>Run-rate (ARR)</dt><dd>Current monthly revenue × 12. Shows the pace today, not a full year's results.</dd></div>
+    <div><dt>Depreciation</dt><dd>Spreading an asset's cost over its useful life. For neoclouds, how fast GPUs are assumed to wear out decides whether they look profitable.</dd></div>
+    <div><dt>EBITDA</dt><dd>Profit before interest, taxes, depreciation and amortization. Popular with power companies and neoclouds; it leaves out real costs.</dd></div>
+    <div><dt>Capacity auction</dt><dd>A grid pays plants to promise they'll be available years ahead. Prices are quoted per megawatt per day.</dd></div>
+    <div><dt>Interconnection</dt><dd>Approval to plug into the grid. Waits can run for years, which makes sites that already have it valuable.</dd></div>
+    <div><dt>PJM / ERCOT</dt><dd>The two grids that matter most here: PJM covers the mid-Atlantic and Midwest, ERCOT covers most of Texas.</dd></div>
+  </dl>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="block"><span class="eyebrow">Check yourself</span><h2>Seven-question quiz</h2></div>
+  <div class="quiz">
+    <div class="score"><span>Score: <strong id="score">0 of 7</strong> answered correctly</span><button type="button" class="reset" id="quiz-reset">Start over</button></div>
+
+    <div class="q" data-answer="c">
+      <p class="q-text">1. Why did memory prices for ordinary phones and PCs jump in 2026?</p>
+      <div class="opts"><button type="button" data-k="a">A factory fire in Korea</button><button type="button" data-k="b">New tariffs on memory chips</button><button type="button" data-k="c">Factories shifted to HBM, which uses far more silicon per unit</button><button type="button" data-k="d">Phones started using more memory</button></div>
+      <p class="explain" hidden>HBM and ordinary DRAM come out of the same factories. Each wafer moved to HBM removes about three times as much ordinary memory from the market.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">2. Memory makers just posted record profits, yet their stocks fell 16–21% in a month. What's the most likely reason?</p>
+      <div class="opts"><button type="button" data-k="a">The profits were fake</button><button type="button" data-k="b">Investors are pricing in a future glut from new factories</button><button type="button" data-k="c">Memory demand already collapsed</button><button type="button" data-k="d">Dividends were cut</button></div>
+      <p class="explain" hidden>Stocks look ahead. In a cyclical industry, investors often sell at peak profits because they expect the new capacity to push prices down later.</p>
+    </div>
+
+    <div class="q" data-answer="a">
+      <p class="q-text">3. What does a neocloud like IREN mainly sell?</p>
+      <div class="opts"><button type="button" data-k="a">Rented GPU computing time</button><button type="button" data-k="b">Electricity to the grid</button><button type="button" data-k="c">AI software subscriptions</button><button type="button" data-k="d">GPUs it designs itself</button></div>
+      <p class="explain" hidden>Neoclouds buy GPUs (mostly Nvidia's), house them in their own data centers with their own power, and rent the computing out under multi-year contracts.</p>
+    </div>
+
+    <div class="q" data-answer="d">
+      <p class="q-text">4. IREN reports an 86% margin "before depreciation." Why does that phrase matter?</p>
+      <div class="opts"><button type="button" data-k="a">It means the figure is audited</button><button type="button" data-k="b">It includes future contracts</button><button type="button" data-k="c">It's a tax benefit</button><button type="button" data-k="d">It leaves out the cost of GPUs wearing out, a huge expense</button></div>
+      <p class="explain" hidden>GPUs cost billions and lose value fast. A margin measured before depreciation looks much better than the true profit after that cost is counted.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">5. Which kind of power company earns a return approved by regulators?</p>
+      <div class="opts"><button type="button" data-k="a">An independent power producer like Vistra</button><button type="button" data-k="b">A regulated utility like Dominion</button><button type="button" data-k="c">A turbine maker like GE Vernova</button><button type="button" data-k="d">A neocloud like CoreWeave</button></div>
+      <p class="explain" hidden>Regulated utilities own the local grid. Regulators set what they can charge and the return they earn on what they build. Power producers sell at market prices instead.</p>
+    </div>
+
+    <div class="q" data-answer="c">
+      <p class="q-text">6. PJM's capacity auction "cleared at the cap." What does that mean?</p>
+      <div class="opts"><button type="button" data-k="a">The auction was canceled</button><button type="button" data-k="b">Prices fell to the minimum</button><button type="button" data-k="c">Demand was so high that the price hit the maximum allowed</button><button type="button" data-k="d">Every power plant was paid the same small amount</button></div>
+      <p class="explain" hidden>Regulators set a ceiling. Hitting it three auctions in a row, while still falling short of the reliability target, means supply can't keep up.</p>
+    </div>
+
+    <div class="q" data-answer="a">
+      <p class="q-text">7. Why did power stocks fall after the midterm elections?</p>
+      <div class="opts"><button type="button" data-k="a">The winners promised to protect households from data-center-driven power costs</button><button type="button" data-k="b">Electricity demand suddenly dropped</button><button type="button" data-k="c">Nuclear power was banned</button><button type="button" data-k="d">Interest rates fell</button></div>
+      <p class="explain" hidden>New governors in Texas and other states campaigned on electric bills, and Texas's on a data center moratorium. That could slow data center growth or shift grid costs onto tech companies.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="block"><span class="eyebrow">Keep going</span><h2>Questions to ask Claude next</h2></div>
+  <ul class="prompts">
+    <li><span class="prompt-text">Show me how past memory cycles played out, like 2018–19 and 2022–23, and what stocks did.</span><button type="button" id="cp1" data-copy>Copy</button></li>
+    <li><span class="prompt-text">How does CoreWeave's debt work, and what happens if AI demand slows?</span><button type="button" id="cp2" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Compare Vistra and Constellation in plain English.</span><button type="button" id="cp3" data-copy>Copy</button></li>
+    <li><span class="prompt-text">What could a Texas data center moratorium mean for IREN and Vistra?</span><button type="button" id="cp4" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Quiz me harder on memory and power.</span><button type="button" id="cp5" data-copy>Copy</button></li>
+  </ul>
+</section>
+
+<footer>
+  <p><strong>Where this comes from.</strong> Company releases, filings and news reports gathered on Nov 16, 2026, linked next to each item. Some are secondary summaries, and figures sometimes differ between sources. No live prices; those need Financial Datasets credits.</p>
+  <p><strong>Not investment advice.</strong> This page explains how the sector works and what is in the news. It doesn't recommend buying or selling anything.</p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var total = document.querySelectorAll('.q').length;
+  var scoreEl = document.getElementById('score');
+  function updateScore() {
+    var right = document.querySelectorAll('.q[data-result="right"]').length;
+    scoreEl.textContent = right + ' of ' + total;
+  }
+  document.querySelectorAll('.q').forEach(function (q) {
+    var answer = q.getAttribute('data-answer');
+    q.querySelectorAll('.opts button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (q.hasAttribute('data-result')) return;
+        var pick = btn.getAttribute('data-k');
+        q.querySelectorAll('.opts button').forEach(function (b) {
+          b.disabled = true;
+          if (b.getAttribute('data-k') === answer) b.classList.add('right');
+        });
+        if (pick !== answer) btn.classList.add('wrong');
+        q.setAttribute('data-result', pick === answer ? 'right' : 'wrong');
+        q.querySelector('.explain').hidden = false;
+        updateScore();
+      });
+    });
+  });
+  document.getElementById('quiz-reset').addEventListener('click', function () {
+    document.querySelectorAll('.q').forEach(function (q) {
+      q.removeAttribute('data-result');
+      q.querySelector('.explain').hidden = true;
+      q.querySelectorAll('.opts button').forEach(function (b) { b.disabled = false; b.classList.remove('right', 'wrong'); });
+    });
+    updateScore();
+  });
+  document.querySelectorAll('[data-copy]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var el = btn.parentElement.querySelector('.prompt-text');
+      var text = el.textContent.trim();
+      function done(label) { btn.textContent = label; setTimeout(function () { btn.textContent = 'Copy'; }, 1600); }
+      function fallback() {
+        try { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); done('Selected'); }
+        catch (e) { done('Copy failed'); }
+      }
+      try { navigator.clipboard.writeText(text).then(function () { done('Copied'); }, fallback); } catch (e) { fallback(); }
+    });
+  });
+})();
+</script>

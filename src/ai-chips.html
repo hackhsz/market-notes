@@ -1,0 +1,576 @@
+<title>AI Chips Deep Dive</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: same system as the Five-Sector Field Guide; one ~800px reading column, sector-1 violet as the identifying color, wide tables scroll in their own box. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #151820;
+  --muted: #586070;
+  --line: #dde1e8;
+  --accent: #2b47cf;
+  --accent-soft: #e8ecfb;
+  --sc: #5a46d6;         /* sector 1 violet */
+  --sc-soft: #eeebfc;
+  --sc-mid: #dcd5fa;
+  --down: #b83a2c;
+  --up: #17783f;
+  --right-bg: #e4f4ea;
+  --wrong-bg: #fbe7e4;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+    --accent: #93a6ff; --accent-soft: #1c2340;
+    --sc: #ab9cff; --sc-soft: #231f3d; --sc-mid: #322b58;
+    --down: #f58a7d; --up: #5fd98f; --right-bg: #143222; --wrong-bg: #3a1c19;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+  --accent: #93a6ff; --accent-soft: #1c2340;
+  --sc: #ab9cff; --sc-soft: #231f3d; --sc-mid: #322b58;
+  --down: #f58a7d; --up: #5fd98f; --right-bg: #143222; --wrong-bg: #3a1c19;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.wrap {
+  max-width: 800px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+  display: flex; flex-direction: column; gap: 56px;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 6vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.5rem, 4.2vw, 2rem); font-weight: 800; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.tk { font-family: var(--font-mono); font-weight: 600; font-size: 0.86em; white-space: nowrap; }
+.src { font-size: 0.82rem; color: var(--muted); }
+.src a { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+.dn { color: var(--down); font-weight: 600; }
+.up { color: var(--up); font-weight: 600; }
+
+header.intro { display: flex; flex-direction: column; gap: 16px; }
+.back { font-size: 0.9rem; font-weight: 600; text-decoration: none; }
+.back:hover { text-decoration: underline; }
+.tag { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sc); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sc); flex: none; }
+.lede { font-size: 1.12rem; }
+
+section { display: flex; flex-direction: column; gap: 18px; scroll-margin-top: 16px; }
+section > .head { display: flex; flex-direction: column; gap: 8px; padding-top: 24px; border-top: 1px solid var(--line); }
+.prose { display: flex; flex-direction: column; gap: 12px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+
+/* short version */
+.short { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.short li { padding: 14px 0 14px 30px; border-top: 1px solid var(--line); position: relative; }
+.short li:first-child { border-top: 0; padding-top: 0; }
+.short li::before { content: ""; position: absolute; left: 4px; top: 22px; width: 12px; height: 2px; background: var(--sc); }
+.short li:first-child::before { top: 8px; }
+
+/* zoom levels */
+.zoom { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.level { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.level .lab { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--sc); }
+.level strong { font-family: var(--font-display); font-size: 1rem; line-height: 1.2; }
+.level p { font-size: 0.86rem; color: var(--muted); }
+.level .fig { font-family: var(--font-mono); font-size: 0.8rem; color: var(--fg); margin-top: auto; padding-top: 6px; border-top: 1px dashed var(--line); }
+
+/* journey */
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; display: flex; flex-direction: column; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-top: 1px solid var(--line); }
+.steps li:first-child { border-top: 0; padding-top: 0; }
+.steps li::before {
+  content: counter(step); font-family: var(--font-mono); font-weight: 600; font-size: 0.9rem; color: var(--sc);
+  width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--sc); display: grid; place-items: center;
+}
+.steps h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.steps p { font-size: 0.94rem; margin-top: 3px; }
+.choke { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; color: var(--down); border: 1px solid currentColor; border-radius: 4px; padding: 1px 6px; }
+
+/* bar charts */
+.chart { display: flex; flex-direction: column; gap: 12px; }
+.chart-title { display: flex; flex-direction: column; gap: 2px; }
+.chart-title h3 { font-size: 1rem; }
+.bars { display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--muted); }
+.bar-row {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 76px; align-items: center; gap: 10px;
+  padding: 7px 0; cursor: default;
+}
+.bar-label { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.85rem; font-weight: 600; color: var(--fg); pointer-events: none; white-space: nowrap; }
+.bar-track { height: 28px; display: flex; align-items: center; }
+.bar { height: 100%; background: var(--sc-soft); border-right: 4px solid var(--sc); border-radius: 0 4px 4px 0; min-width: 4px; }
+.bar-val { font-family: var(--font-mono); font-weight: 600; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.tip {
+  position: absolute; left: 10px; bottom: calc(100% - 4px); z-index: 2; background: var(--fg); color: var(--bg);
+  font-size: 0.78rem; padding: 6px 9px; border-radius: 6px; white-space: nowrap; max-width: calc(100vw - 48px); overflow: hidden; text-overflow: ellipsis;
+  opacity: 0; transform: translateY(4px); transition: opacity 0.12s, transform 0.12s; pointer-events: none;
+}
+.bar-row:hover .tip, .bar-row:focus-visible .tip { opacity: 1; transform: none; }
+.bar-row:hover .bar, .bar-row:focus-visible .bar { background: var(--sc-mid); }
+.chart-note { font-size: 0.82rem; color: var(--muted); }
+
+/* tables */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 0.92rem; }
+th, td { text-align: left; padding: 10px 14px; vertical-align: top; border-top: 1px solid var(--line); }
+thead th { border-top: 0; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+td.k { font-weight: 600; white-space: nowrap; }
+td.b { font-variant-numeric: tabular-nums; }
+
+/* news-style lists */
+.news { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.news li { padding: 12px 0 12px 18px; border-top: 1px solid var(--line); position: relative; }
+.news li:first-child { border-top: 0; padding-top: 0; }
+.news li::before { content: ""; position: absolute; left: 2px; top: 21px; width: 7px; height: 7px; border-radius: 50%; background: var(--sc); }
+.news li:first-child::before { top: 9px; }
+.news li p { font-size: 0.95rem; }
+.news .src { display: block; margin-top: 3px; }
+
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.two .panel { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.two ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; font-size: 0.92rem; }
+.two h3 { font-size: 0.95rem; }
+
+.terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin: 0; }
+.terms div { padding: 12px 0; border-top: 1px solid var(--line); min-width: 0; }
+.terms dt { font-weight: 600; }
+.terms dd { margin: 2px 0 0; color: var(--muted); font-size: 0.92rem; }
+
+.timeline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-top: 2px solid var(--sc); }
+.timeline div { padding: 10px 10px 0 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.timeline .yr { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
+.timeline strong { font-family: var(--font-display); }
+.timeline span:last-child { font-size: 0.84rem; color: var(--muted); }
+.timeline .now strong { color: var(--sc); }
+
+/* quiz */
+.quiz { display: flex; flex-direction: column; gap: 14px; }
+.score { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.score strong { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.reset { font: 600 0.82rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.q-text { font-weight: 600; }
+.opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.opts button {
+  text-align: left; font: 500 0.9rem/1.4 var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 12px; cursor: pointer; min-width: 0;
+}
+.opts button:hover:not(:disabled) { border-color: var(--sc); }
+.opts button:disabled { cursor: default; }
+.opts button.right { background: var(--right-bg); border-color: var(--up); }
+.opts button.wrong { background: var(--wrong-bg); border-color: var(--down); }
+.opts button.right::after { content: "  ✓ correct"; color: var(--up); font-weight: 600; font-size: 0.8rem; }
+.opts button.wrong::after { content: "  ✗ your pick"; color: var(--down); font-weight: 600; font-size: 0.8rem; }
+.explain { font-size: 0.92rem; color: var(--muted); border-left: 2px solid var(--sc); padding-left: 12px; }
+
+.prompts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.prompts li { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 10px 10px 16px; }
+.prompts .prompt-text { flex: 1; min-width: 0; font-size: 0.93rem; }
+.prompts button { flex: none; font: 600 0.8rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+
+.callout { border-left: 3px solid var(--sc); padding: 4px 0 4px 14px; font-size: 0.95rem; }
+
+footer { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; }
+footer p { max-width: 75ch; }
+
+@media (max-width: 720px) {
+  .zoom { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
+}
+@media (max-width: 600px) {
+  .wrap { padding-block: 28px 48px; gap: 44px; }
+  .terms, .two, .opts { grid-template-columns: minmax(0, 1fr); }
+  .panel { padding: 16px; }
+}
+@media (max-width: 380px) { .zoom { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } html { scroll-behavior: auto; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+
+<header class="intro">
+  <a class="back" href="https://claude.ai/artifact/Mq5pzCbhH5xSqJEqRew4Hj">← Five-Sector Field Guide</a>
+  <span class="tag"><span class="dot"></span>Sector 1 · Deep dive · as of Nov 16, 2026</span>
+  <h1>AI chips, one layer deeper</h1>
+  <p class="lede">How an AI chip actually works, the eight-step journey from design to data center, who earns what along the way, the big fight between Nvidia and custom chips, and exactly what to look for in Nvidia's earnings on Tuesday.</p>
+</header>
+
+<!-- SHORT VERSION -->
+<section>
+  <div class="head"><span class="eyebrow">If you only read one part</span><h2>The short version</h2></div>
+  <ul class="short">
+    <li><strong>AI is a mountain of simple multiplication.</strong> Chips that do thousands of multiplications at once, and get data in and out fast enough, win.</li>
+    <li><strong>Nvidia sells whole systems, not just chips</strong>, and still earns most of the money in AI hardware. Custom chips built for Google, Amazon and others are growing faster, from a smaller base.</li>
+    <li><strong>Everything runs through a few chokepoints</strong>: TSMC's factories and packaging, three memory makers, and one Dutch machine maker. Those companies win no matter which chip designer wins.</li>
+    <li><strong>This week is unusual.</strong> Nvidia reports on Nov 17 with an interim CEO, after its founder resigned on Nov 12.</li>
+  </ul>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="head"><span class="eyebrow">The technology, without the jargon</span><h2>How an AI chip works</h2></div>
+  <div class="prose">
+    <p><strong>Why GPUs?</strong> A neural network is mostly multiplying big grids of numbers. A regular processor (CPU) is like a few very smart workers who handle anything, one task at a time. A GPU is like thousands of simple workers doing the same kind of math at once. For AI, the crowd wins.</p>
+    <p><strong>Training vs. inference.</strong> <em>Training</em> is teaching a model, once, on huge clusters for weeks or months. <em>Inference</em> is using the trained model every time someone asks it something. Inference keeps growing with every new user, which is why it is becoming the larger market, and why cheaper custom chips aimed at inference are gaining ground.</p>
+    <p><strong>The memory wall.</strong> AI chips can do math faster than ordinary memory can feed them numbers, so they sit idle waiting. The fix is HBM: memory stacked in towers and placed millimeters from the chip. That's why memory makers are now AI companies too.</p>
+    <p><strong>Many chips acting as one.</strong> No single chip can hold a modern model, so chips are wired together. Inside a rack, Nvidia's NVLink lets 72 GPUs behave like one giant GPU. Between racks, network switches tie thousands of them into a cluster.</p>
+  </div>
+
+  <div class="zoom" role="list" aria-label="Four levels of an AI system, from chip to cluster">
+    <div class="level" role="listitem">
+      <span class="lab">Level 1 · Package</span>
+      <strong>GPU + memory</strong>
+      <p>One or two GPU chips surrounded by HBM stacks, joined on a base by TSMC's CoWoS packaging.</p>
+      <span class="fig">a few cm across</span>
+    </div>
+    <div class="level" role="listitem">
+      <span class="lab">Level 2 · Tray</span>
+      <strong>GPUs + CPU</strong>
+      <p>Several GPU packages paired with an Nvidia processor on one board that slides into a rack.</p>
+      <span class="fig">a few GPUs per tray</span>
+    </div>
+    <div class="level" role="listitem">
+      <span class="lab">Level 3 · Rack</span>
+      <strong>72 GPUs as one</strong>
+      <p>Trays linked by NVLink into a single computer, sold by Nvidia as a complete unit.</p>
+      <span class="fig">power of ~100 homes</span>
+    </div>
+    <div class="level" role="listitem">
+      <span class="lab">Level 4 · Cluster</span>
+      <strong>Thousands of racks</strong>
+      <p>Racks networked into one AI factory. The largest planned sites draw a gigawatt or more.</p>
+      <span class="fig">100,000+ GPUs</span>
+    </div>
+  </div>
+  <p class="src">Nvidia says each gigawatt of data center built on its new Vera Rubin platform is about $40B of revenue opportunity for it, up from about $18B with its 2022–24 Hopper generation. <a href="https://finance.yahoo.com/markets/stocks/articles/nvidia-corp-nvda-q2-2027-050152280.html">Yahoo Finance call summary</a></p>
+
+  <div class="sub">
+    <h3 style="margin-bottom:10px">Nvidia's chip generations, so the names make sense</h3>
+    <div class="timeline">
+      <div><span class="yr">2022–24</span><strong>Hopper</strong><span>H100, H200. Started the boom.</span></div>
+      <div><span class="yr">2025</span><strong>Blackwell</strong><span>B200, GB200 racks.</span></div>
+      <div><span class="yr">2025–26</span><strong>Blackwell Ultra</strong><span>GB300. Drove the last few quarters.</span></div>
+      <div class="now"><span class="yr">Ramping now</span><strong>Vera Rubin</strong><span>In full production as of August.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- JOURNEY -->
+<section id="journey">
+  <div class="head"><span class="eyebrow">Design to data center</span><h2>The journey of one AI chip</h2></div>
+  <p>Each step is a different set of companies. The red tags mark chokepoints, where only one to three companies in the world can do the job.</p>
+  <ol class="steps">
+    <li><div><h3>Design <span class="tk" style="color:var(--sc)">NVDA · AMD · AVGO · MRVL</span></h3><p>Engineers draw the chip over two to three years, using design software from Synopsys (SNPS) and Cadence (CDNS). Some designs build on Arm's blueprints.</p></div></li>
+    <li><div><h3>Machines <span class="choke">Chokepoint</span> <span class="tk" style="color:var(--sc)">ASML</span></h3><p>ASML is the only company that makes EUV lithography machines, which print the finest patterns. Each one costs well over $100 million.</p></div></li>
+    <li><div><h3>Manufacturing <span class="choke">Chokepoint</span> <span class="tk" style="color:var(--sc)">TSM</span></h3><p>TSMC etches the chips onto silicon wafers, mostly in Taiwan with growing capacity in Arizona. Its newest 2nm process is ramping now.</p></div></li>
+    <li><div><h3>Memory <span class="choke">Chokepoint</span> <span class="tk" style="color:var(--sc)">SK Hynix · MU · Samsung</span></h3><p>Three companies make the HBM memory stacks. SK Hynix leads and says it is sold out through 2029.</p></div></li>
+    <li><div><h3>Packaging <span class="choke">Chokepoint</span> <span class="tk" style="color:var(--sc)">TSM</span></h3><p>TSMC's CoWoS process joins the chip and its memory on one base. For years this has been the tightest bottleneck in the whole chain.</p></div></li>
+    <li><div><h3>Systems <span class="tk" style="color:var(--sc)">Foxconn · Quanta · DELL · SMCI</span></h3><p>Contract manufacturers assemble chips into trays and full racks.</p></div></li>
+    <li><div><h3>Networking <span class="tk" style="color:var(--sc)">NVDA · AVGO · ANET</span></h3><p>Switches and cables tie racks together. Nvidia sells its own networking; Broadcom and Arista sell Ethernet gear.</p></div></li>
+    <li><div><h3>Customers</h3><p>Big Tech clouds, neoclouds like CoreWeave and IREN, AI labs, and governments building national AI systems.</p></div></li>
+  </ol>
+</section>
+
+<!-- WHO EARNS WHAT -->
+<section id="money">
+  <div class="head"><span class="eyebrow">Latest reported numbers</span><h2>Who earns what</h2></div>
+
+  <div class="panel chart">
+    <div class="chart-title">
+      <h3>AI chip revenue in the latest reported quarter</h3>
+      <span class="src">US dollars. Hover or tab to a bar for its period.</span>
+    </div>
+    <div class="bars" role="list">
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="Nvidia data center, 89.0 billion dollars, May to July 2026">
+        <div class="bar-track"><div class="bar" style="width:98.9%"></div></div><span class="bar-val">$89.0B</span>
+        <span class="bar-label">Nvidia · data center</span>
+        <span class="tip">May–Jul 2026 · up 117% from a year earlier</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="Broadcom AI semiconductors, 16.7 billion dollars, latest quarter">
+        <div class="bar-track"><div class="bar" style="width:18.6%"></div></div><span class="bar-val">$16.7B</span>
+        <span class="bar-label">Broadcom · AI chips</span>
+        <span class="tip">Latest quarter · guided to $21.7B next</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="AMD data center, 8.5 billion dollars, July to September 2026">
+        <div class="bar-track"><div class="bar" style="width:9.4%"></div></div><span class="bar-val">$8.5B</span>
+        <span class="bar-label">AMD · data center</span>
+        <span class="tip">Jul–Sep 2026 · up 97% · includes server CPUs</span>
+      </div>
+    </div>
+    <p class="chart-note">Nvidia's AI business is about five times Broadcom's and ten times AMD's. Quarters don't line up exactly, and AMD's figure includes regular server processors.</p>
+  </div>
+
+  <div class="panel chart">
+    <div class="chart-title">
+      <h3>Gross margin: how much of each sales dollar is left after making the product</h3>
+      <span class="src">Percent of revenue, scale 0–100%.</span>
+    </div>
+    <div class="bars" role="list">
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="Nvidia gross margin 75.0 percent, May to July 2026">
+        <div class="bar-track"><div class="bar" style="width:75%"></div></div><span class="bar-val">75.0%</span>
+        <span class="bar-label">Nvidia</span>
+        <span class="tip">May–Jul 2026 · ~74% guided for Aug–Oct</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="TSMC gross margin 66.4 percent, July to September 2026">
+        <div class="bar-track"><div class="bar" style="width:66.4%"></div></div><span class="bar-val">66.4%</span>
+        <span class="bar-label">TSMC</span>
+        <span class="tip">Jul–Sep 2026 · dipped as 2nm ramps</span>
+      </div>
+      <div class="bar-row" tabindex="0" role="listitem" aria-label="AMD gross margin 54 percent, July to September 2026">
+        <div class="bar-track"><div class="bar" style="width:54%"></div></div><span class="bar-val">54%</span>
+        <span class="bar-label">AMD</span>
+        <span class="tip">Jul–Sep 2026</span>
+      </div>
+    </div>
+    <p class="chart-note">Nvidia keeps 75 cents of every dollar before other expenses, an unusually high figure for a hardware company. That margin is exactly what customers building their own chips are trying to avoid paying.</p>
+  </div>
+
+  <ul class="news">
+    <li><p><strong>Nvidia</strong> (May–Jul 2026): revenue $96.2B, up 106% from a year earlier. Data center was $89.0B, about 92% of the total. It guided $108B (±2%) for Aug–Oct and said Vera Rubin is in full production.</p>
+      <span class="src"><a href="https://www.stocktitan.net/news/NVDA/nvidia-announces-financial-results-for-second-quarter-fiscal-98x41cxh35vk.html">Nvidia results via StockTitan</a> · <a href="https://betafinch.com/blog/nvidia-q2-fy2027-earnings-revenue-guidance">Betafinch</a></span></li>
+    <li><p><strong>AMD</strong> (Jul–Sep 2026, reported Nov 3): record revenue of $13.4B. Its new MI450 chips started selling, and Helios rack systems are being deployed at Meta, Microsoft, OpenAI, Oracle and Anthropic. It expects data center revenue to grow another 50% next quarter.</p>
+      <span class="src"><a href="https://www.globenewswire.com/news-release/2026/11/03/3394824/0/en/amd-reports-third-quarter-2026-financial-results.html">AMD release</a> · <a href="https://www.investing.com/news/company-news/amd-q3-2026-slides-data-center-surges-97-record-earnings-beat-93CH-4996928">Investing.com</a></span></li>
+    <li><p><strong>TSMC</strong> (Jul–Sep 2026, reported Oct 15): revenue of about $46.7B beat its own forecast of $44.6–45.8B. High-performance computing, mostly AI, was 68% of sales. 2nm went from about 3% to 8% of wafer revenue in one quarter, and 2nm capacity is set to more than double in 2027.</p>
+      <span class="src"><a href="https://www.cnbc.com/2026/10/15/tsmc-third-quarter-profit-global-ai-.html">CNBC</a> · <a href="https://www.fool.com/earnings/call-transcripts/2026/10/15/tsmc-tsm-q3-2026-earnings-call-transcript/">Call transcript</a></span></li>
+  </ul>
+</section>
+
+<!-- THE BIG DEBATE -->
+<section id="debate">
+  <div class="head"><span class="eyebrow">The question that decides Nvidia's future</span><h2>Nvidia GPUs vs. custom chips</h2></div>
+  <div class="prose">
+    <p>Nvidia's biggest customers are also building their own chips: Google's TPU, Amazon's Trainium, Microsoft's Maia and Meta's MTIA. OpenAI unveiled its first in-house chip, built with Broadcom, this year. Most of these are designed with help from Broadcom or Marvell and manufactured by TSMC.</p>
+  </div>
+  <div class="two">
+    <div class="panel"><h3>Why customers build their own</h3><ul>
+      <li>Cost: Nvidia's 75% margin is their expense</li>
+      <li>Tuned for their own workloads, especially inference</li>
+      <li>Less dependence on one supplier</li>
+      <li>They have the scale to justify a chip team</li>
+    </ul></div>
+    <div class="panel"><h3>Why Nvidia still leads</h3><ul>
+      <li>CUDA: most AI software is written for it</li>
+      <li>Sells the full system: chips, networking, software</li>
+      <li>A new generation roughly every year</li>
+      <li>Flexible: runs any model, not just one company's</li>
+    </ul></div>
+  </div>
+  <ul class="news">
+    <li><p><strong>Share estimates vary by method.</strong> Research firms put Nvidia at roughly 75–85% of AI chip revenue in 2026, down from about 87% in 2024. Google's TPU is estimated at 6–8% and Amazon's Trainium at 2–3%.</p>
+      <span class="src"><a href="https://safeguard.sh/resources/blog/ai-chip-market-share-2026-nvidia-custom-silicon-training-vs-inference">Safeguard</a> · <a href="https://hashrateindex.com/blog/hyperscaler-ai-asic-market-report-part-1/">Hashrate Index</a></span></li>
+    <li><p><strong>Custom chips are growing faster.</strong> TrendForce expects custom chip shipments to grow about 45% this year versus about 16% for GPUs. Amazon has reportedly cited more than $225B in Trainium commitments, including deals with Anthropic and OpenAI.</p>
+      <span class="src"><a href="https://tech-insider.org/nvidia-customers-rivals-custom-silicon-race-2026/">Tech Insider</a> · <a href="https://safeguard.sh/resources/blog/ai-chip-market-share-2026-nvidia-custom-silicon-training-vs-inference">Safeguard</a></span></li>
+    <li><p><strong>It isn't either/or yet.</strong> OpenAI kept its Nvidia and AMD deals while building its own chip, so custom chips have mostly added to GPU fleets so far.</p>
+      <span class="src"><a href="https://tech-insider.org/nvidia-custom-chip-rivals-openai-google-microsoft-amazon-2026/">Tech Insider</a></span></li>
+  </ul>
+  <p class="callout">Whoever wins the design fight, TSMC manufactures the chips, the memory makers supply the HBM, and Broadcom designs many of the custom chips. Investors call companies like these "picks and shovels."</p>
+</section>
+
+<!-- CHINA -->
+<section id="china">
+  <div class="head"><span class="eyebrow">Politics</span><h2>China and export controls</h2></div>
+  <p>The US limits which AI chips can be sold to China. Since late 2025 it has allowed Nvidia's older H200 to approved Chinese buyers, with the US government taking a 25% cut. But Beijing has largely blocked those imports.</p>
+  <ul class="news">
+    <li><p><strong>Chips stuck in limbo.</strong> About 600,000 H200 chips are reportedly sitting in Hong Kong waiting for approval to enter mainland China. Nvidia took a $0.4B charge for excess H200 inventory in the first half of its fiscal year.</p>
+      <span class="src"><a href="https://www.unite.ai/roughly-600-000-nvidia-h200s-idle-in-hong-kong-amid-beijings-import-hold/">Unite.AI (citing Reuters)</a> · <a href="https://builtin.com/articles/trump-lifts-ai-chip-ban-china-nvidia">Built In</a></span></li>
+    <li><p><strong>New US rules today.</strong> The Commerce Department issued a rule aimed at Singapore and Malaysia, part of a push to stop chips being rerouted to China.</p>
+      <span class="src"><a href="https://fortune.com/2026/11/16/new-commerce-rule-nvidia-chip-singapore-malaysia-china/">Fortune</a></span></li>
+    <li><p><strong>What it means for the numbers.</strong> Nvidia's forecast assumes zero data center chip sales to China. Any China revenue would be a bonus, and any new restriction mostly hurts future hopes, not current sales.</p></li>
+  </ul>
+</section>
+
+<!-- EARNINGS -->
+<section id="earnings">
+  <div class="head"><span class="eyebrow">Tuesday, Nov 17, after the 4 p.m. ET close</span><h2>How to read Nvidia's earnings</h2></div>
+  <div class="prose">
+    <p><strong>First, the calendar.</strong> Nvidia's fiscal year ends in late January, so "fiscal Q3 2027" means roughly August through October 2026. Many companies number their quarters this way, so always check the actual months.</p>
+    <p><strong>How the evening goes.</strong> Nvidia posts its results shortly after the market closes, then holds a call where executives answer analyst questions. The stock trades and moves in after-hours trading right away, and the next regular session gives the real verdict.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>What to check</th><th>The bar to beat</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Revenue</td><td class="b">Guided $108B ±2%; analysts expect about $109B</td><td>Nvidia has beaten for several quarters in a row, so a small beat is already expected.</td></tr>
+      <tr><td class="k">Data center revenue</td><td class="b">About $102B expected, up ~14% from last quarter</td><td>The AI business, and over 90% of the total.</td></tr>
+      <tr><td class="k">Gross margin</td><td class="b">About 74% guided</td><td>A drop can signal price competition or costly new-product ramps.</td></tr>
+      <tr><td class="k">Next quarter's forecast</td><td class="b">Compare it with $108B</td><td>This usually moves the stock more than the results themselves.</td></tr>
+      <tr><td class="k">Vera Rubin</td><td class="b">Expected ~20% of data center revenue</td><td>Shows whether the new generation is shipping on schedule.</td></tr>
+      <tr><td class="k">China</td><td class="b">Assumed zero</td><td>Any sales there are upside.</td></tr>
+      <tr><td class="k">Leadership</td><td class="b">Interim CEO Colette Kress</td><td>Listen for the CEO search and whether customers are staying put.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout"><strong>"Beat and raise" isn't always enough.</strong> Prices already reflect what investors expect. Nvidia has beaten its forecasts and raised guidance several times recently and still seen the stock fall the next day.</p>
+  <p class="src">Expectations: <a href="https://seekingalpha.com/article/4967621-nvidia-earnings-preview-q3-2027">Seeking Alpha (Visible Alpha consensus)</a> · <a href="https://www.oanda.com/uk-en/skills-and-insights/education/trading-asset-classes/shares/nvidia-q3-earnings-preview-nov-2026/">OANDA</a> · <a href="https://www.investingcube.com/deep-analysis/nvidia-q3-fy2027-earnings-preview-can-ai-infrastructure-demand-shield-nvda-stock-from-jensen-huangs-departure/">InvestingCube</a>. Estimates differ slightly between sources.</p>
+</section>
+
+<!-- BULL / BEAR -->
+<section id="cases">
+  <div class="head"><span class="eyebrow">Both sides, as investors argue them</span><h2>The bull case and the bear case</h2></div>
+  <div class="two">
+    <div class="panel"><h3>Bull case</h3><ul>
+      <li>Demand still outruns supply: TSMC keeps raising forecasts and SK Hynix is sold out through 2029</li>
+      <li>Inference grows with every new AI user</li>
+      <li>Alphabet says its 2027 spending will rise significantly</li>
+      <li>Each new Nvidia generation earns more per data center</li>
+      <li>AMD's ramp shows demand is big enough for more than one winner</li>
+    </ul></div>
+    <div class="panel"><h3>Bear case</h3><ul>
+      <li>Several Big Tech companies now spend more on capex than their operations bring in</li>
+      <li>Custom chips chip away at Nvidia's share and margins</li>
+      <li>Leadership uncertainty at the industry's most important company</li>
+      <li>China is closed for now, and the rules keep shifting</li>
+      <li>Chip booms have historically ended in oversupply</li>
+      <li>Interest rates near 5% make expensive stocks harder to justify</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- GLOSSARY -->
+<section id="terms">
+  <div class="head"><span class="eyebrow">Reference</span><h2>Words in this sector</h2></div>
+  <dl class="terms">
+    <div><dt>CUDA</dt><dd>Nvidia's programming platform. Years of AI software are written for it, which makes switching costly.</dd></div>
+    <div><dt>NVLink</dt><dd>Nvidia's high-speed links that let many GPUs in a rack work as one.</dd></div>
+    <div><dt>CoWoS</dt><dd>TSMC's advanced packaging that places a chip and its memory side by side on one base.</dd></div>
+    <div><dt>EUV</dt><dd>Extreme ultraviolet lithography: the light-based printing that makes the smallest chip features. Only ASML builds the machines.</dd></div>
+    <div><dt>ASIC / XPU</dt><dd>A custom chip built for one customer's workload. Google's TPU is one.</dd></div>
+    <div><dt>Rack-scale</dt><dd>Selling a whole rack of chips, networking and cooling as one product, as Nvidia and AMD now do.</dd></div>
+    <div><dt>Sovereign AI</dt><dd>Governments buying AI computing for their own countries. A newer source of chip demand.</dd></div>
+    <div><dt>Whisper number</dt><dd>The unofficial figure traders actually expect, often above the published analyst consensus.</dd></div>
+  </dl>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="head"><span class="eyebrow">Check yourself</span><h2>Seven-question quiz</h2></div>
+  <div class="quiz">
+    <div class="score"><span>Score: <strong id="score">0 of 7</strong> answered correctly</span><button type="button" class="reset" id="quiz-reset">Start over</button></div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">1. Nvidia designs its AI chips. Who manufactures them?</p>
+      <div class="opts"><button type="button" data-k="a">Nvidia's own factories</button><button type="button" data-k="b">TSMC</button><button type="button" data-k="c">ASML</button><button type="button" data-k="d">Micron</button></div>
+      <p class="explain" hidden>Nvidia is fabless. TSMC manufactures its chips. ASML builds the machines TSMC uses, and Micron makes memory.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">2. Why is HBM memory placed right next to the GPU?</p>
+      <div class="opts"><button type="button" data-k="a">To keep the GPU cool</button><button type="button" data-k="b">The GPU would otherwise sit idle waiting for data</button><button type="button" data-k="c">It's cheaper than regular memory</button><button type="button" data-k="d">So the chip can run without a CPU</button></div>
+      <p class="explain" hidden>AI chips do math faster than ordinary memory can supply numbers. Putting memory millimeters away shortens the trip. HBM is actually far more expensive than regular memory.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">3. What is inference?</p>
+      <div class="opts"><button type="button" data-k="a">Teaching a new model from scratch</button><button type="button" data-k="b">Running a trained model to answer requests</button><button type="button" data-k="c">Etching a chip onto a wafer</button><button type="button" data-k="d">Testing chips for defects</button></div>
+      <p class="explain" hidden>Training happens once per model. Inference happens every time someone uses it, so it grows with users. Many custom chips target inference.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">4. Nvidia beats its revenue forecast, and the stock falls the next day. What's the most likely reason?</p>
+      <div class="opts"><button type="button" data-k="a">The report had an accounting error</button><button type="button" data-k="b">Investors expected more, or the next forecast disappointed</button><button type="button" data-k="c">Stocks always fall after earnings</button><button type="button" data-k="d">Trading was halted</button></div>
+      <p class="explain" hidden>Prices already include what investors expect. A company can beat its own forecast and still fall short of the market's hopes, which has happened to Nvidia several times.</p>
+    </div>
+
+    <div class="q" data-answer="c">
+      <p class="q-text">5. Which company helps Google design its TPU chips?</p>
+      <div class="opts"><button type="button" data-k="a">Nvidia</button><button type="button" data-k="b">AMD</button><button type="button" data-k="c">Broadcom</button><button type="button" data-k="d">Intel</button></div>
+      <p class="explain" hidden>Broadcom co-designs custom chips for several giants, Google's TPU among them. That's why it rises on custom-chip news.</p>
+    </div>
+
+    <div class="q" data-answer="b">
+      <p class="q-text">6. Nvidia's "fiscal Q3 2027" covers roughly which months?</p>
+      <div class="opts"><button type="button" data-k="a">Jul–Sep 2027</button><button type="button" data-k="b">Aug–Oct 2026</button><button type="button" data-k="c">Jan–Mar 2027</button><button type="button" data-k="d">Oct–Dec 2026</button></div>
+      <p class="explain" hidden>Nvidia's fiscal year ends in late January, so fiscal 2027 mostly overlaps calendar 2026.</p>
+    </div>
+
+    <div class="q" data-answer="a">
+      <p class="q-text">7. Which of these has only one supplier in the world?</p>
+      <div class="opts"><button type="button" data-k="a">EUV lithography machines</button><button type="button" data-k="b">AI chip design</button><button type="button" data-k="c">Server assembly</button><button type="button" data-k="d">HBM memory</button></div>
+      <p class="explain" hidden>Only ASML makes EUV machines. Chip design has several rivals, many firms assemble servers, and HBM has three makers.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PROMPTS -->
+<section>
+  <div class="head"><span class="eyebrow">Keep going</span><h2>Questions to ask Claude next</h2></div>
+  <ul class="prompts">
+    <li><span class="prompt-text">Nvidia just reported. Walk me through the results against the checklist.</span><button type="button" id="cp1" data-copy>Copy</button></li>
+    <li><span class="prompt-text">What is CUDA, and why is it so hard for competitors to replace?</span><button type="button" id="cp2" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Compare TSMC and Intel's chip factories in plain English.</span><button type="button" id="cp3" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Explain how Broadcom makes money from custom AI chips.</span><button type="button" id="cp4" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Quiz me harder on AI chips.</span><button type="button" id="cp5" data-copy>Copy</button></li>
+  </ul>
+</section>
+
+<footer>
+  <p><strong>Where this comes from.</strong> Company releases, filings and news reports gathered on Nov 16, 2026, linked next to each item. Some are secondary summaries, and estimates differ slightly between sources. No live prices; those need Financial Datasets credits.</p>
+  <p><strong>Not investment advice.</strong> This page explains how the sector works and what is in the news. It doesn't recommend buying or selling anything. Anthropic, mentioned as a customer above, makes Claude, which wrote this page.</p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var total = document.querySelectorAll('.q').length;
+  var scoreEl = document.getElementById('score');
+  function updateScore() {
+    var right = document.querySelectorAll('.q[data-result="right"]').length;
+    scoreEl.textContent = right + ' of ' + total;
+  }
+  document.querySelectorAll('.q').forEach(function (q) {
+    var answer = q.getAttribute('data-answer');
+    q.querySelectorAll('.opts button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (q.hasAttribute('data-result')) return;
+        var pick = btn.getAttribute('data-k');
+        q.querySelectorAll('.opts button').forEach(function (b) {
+          b.disabled = true;
+          if (b.getAttribute('data-k') === answer) b.classList.add('right');
+        });
+        if (pick !== answer) btn.classList.add('wrong');
+        q.setAttribute('data-result', pick === answer ? 'right' : 'wrong');
+        q.querySelector('.explain').hidden = false;
+        updateScore();
+      });
+    });
+  });
+  document.getElementById('quiz-reset').addEventListener('click', function () {
+    document.querySelectorAll('.q').forEach(function (q) {
+      q.removeAttribute('data-result');
+      q.querySelector('.explain').hidden = true;
+      q.querySelectorAll('.opts button').forEach(function (b) { b.disabled = false; b.classList.remove('right', 'wrong'); });
+    });
+    updateScore();
+  });
+
+  document.querySelectorAll('[data-copy]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var el = btn.parentElement.querySelector('.prompt-text');
+      var text = el.textContent.trim();
+      function done(label) { btn.textContent = label; setTimeout(function () { btn.textContent = 'Copy'; }, 1600); }
+      function fallback() {
+        try { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); done('Selected'); }
+        catch (e) { done('Copy failed'); }
+      }
+      try { navigator.clipboard.writeText(text).then(function () { done('Copied'); }, fallback); } catch (e) { fallback(); }
+    });
+  });
+})();
+</script>

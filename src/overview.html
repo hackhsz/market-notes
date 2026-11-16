@@ -1,0 +1,678 @@
+<title>Five-Sector Field Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column (~760px) of five sector chapters, each opened by a numbered sector tag; wide tables scroll inside their own box. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #151820;
+  --muted: #586070;
+  --line: #dde1e8;
+  --accent: #2b47cf;
+  --accent-soft: #e8ecfb;
+  --c1: #5a46d6;  /* AI chips */
+  --c2: #a8620a;  /* AI infrastructure */
+  --c3: #ad2d6b;  /* games */
+  --c4: #0c7a71;  /* big tech */
+  --c5: #bf3f2b;  /* hot topics */
+  --down: #b83a2c;
+  --up: #17783f;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+    --accent: #93a6ff; --accent-soft: #1c2340;
+    --c1: #ab9cff; --c2: #f0b259; --c3: #f27ab4; --c4: #52d0c3; --c5: #ff8b74;
+    --down: #f58a7d; --up: #5fd98f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+  --accent: #93a6ff; --accent-soft: #1c2340;
+  --c1: #ab9cff; --c2: #f0b259; --c3: #f27ab4; --c4: #52d0c3; --c5: #ff8b74;
+  --down: #f58a7d; --up: #5fd98f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.wrap {
+  max-width: 800px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 6vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.6rem, 4.4vw, 2.1rem); font-weight: 800; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.tk { font-family: var(--font-mono); font-weight: 600; font-size: 0.86em; letter-spacing: 0.01em; white-space: nowrap; }
+.src { font-size: 0.82rem; color: var(--muted); }
+.src a { color: var(--muted); }
+
+/* header */
+header.intro { display: flex; flex-direction: column; gap: 16px; }
+.lede { font-size: 1.12rem; color: var(--fg); }
+.notes { display: flex; flex-wrap: wrap; gap: 8px; }
+.note {
+  font-size: 0.8rem; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface);
+}
+nav.toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+nav.toc a {
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--fg);
+  font-weight: 600; font-size: 0.9rem; padding: 7px 12px 7px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line);
+}
+nav.toc a:hover { border-color: var(--muted); }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--sc, var(--accent)); }
+.s1 { --sc: var(--c1); } .s2 { --sc: var(--c2); } .s3 { --sc: var(--c3); } .s4 { --sc: var(--c4); } .s5 { --sc: var(--c5); }
+
+/* blocks */
+.block { display: flex; flex-direction: column; gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+
+/* this week */
+.week { display: grid; gap: 0; }
+.week-row {
+  display: grid; grid-template-columns: 92px 1fr; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line);
+}
+.week-row:first-child { border-top: 0; padding-top: 0; }
+.week-row:last-child { padding-bottom: 0; }
+.when { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; color: var(--accent); padding-top: 2px; }
+.week-row p { font-size: 0.95rem; }
+.chips { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: 1px; }
+.chips .dot { width: 8px; height: 8px; }
+
+/* follow the money */
+.flow { display: flex; flex-direction: column; gap: 0; }
+.flow-top {
+  background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline;
+}
+.flow-top strong { font-family: var(--font-display); font-size: 1.15rem; }
+.flow-link {
+  display: flex; align-items: center; gap: 10px; padding: 8px 0 8px 22px; font-size: 0.8rem; color: var(--muted);
+  font-family: var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase;
+}
+.flow-link::before { content: ""; width: 2px; height: 26px; background: var(--muted); opacity: 0.6; }
+.flow-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.node { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+.node .lab { display: flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+.node strong { font-family: var(--font-display); font-size: 1rem; line-height: 1.2; }
+.node p { font-size: 0.85rem; color: var(--muted); }
+.node .tks { font-size: 0.8rem; }
+
+/* terms */
+.terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin: 0; }
+.terms div { padding: 12px 0; border-top: 1px solid var(--line); min-width: 0; }
+.terms dt { font-weight: 600; }
+.terms dd { margin: 2px 0 0; color: var(--muted); font-size: 0.92rem; }
+
+/* sectors */
+section.sector { display: flex; flex-direction: column; gap: 22px; scroll-margin-top: 16px; }
+.sector-head { display: flex; flex-direction: column; gap: 10px; padding-top: 28px; border-top: 3px solid var(--sc); }
+.tag { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sc); font-weight: 600; }
+.sub { display: flex; flex-direction: column; gap: 10px; }
+.deeper { align-self: flex-start; font-weight: 600; font-size: 0.9rem; text-decoration: none; color: var(--sc); border: 1px solid var(--sc); border-radius: 8px; padding: 6px 12px; }
+.deeper:hover { background: var(--bg); text-decoration: underline; }
+.sub > h3 { color: var(--fg); }
+.sector p + p { margin-top: 0; }
+.prose { display: flex; flex-direction: column; gap: 12px; }
+
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 0.92rem; }
+th, td { text-align: left; padding: 10px 14px; vertical-align: top; border-top: 1px solid var(--line); }
+thead th { border-top: 0; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; background: transparent; }
+td.t { width: 1%; white-space: nowrap; color: var(--sc); }
+td.n { width: 1%; white-space: nowrap; font-weight: 600; }
+tr.gone td { color: var(--muted); }
+
+.news { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
+.news li { padding: 12px 0 12px 18px; border-top: 1px solid var(--line); position: relative; }
+.news li:first-child { border-top: 0; padding-top: 0; }
+.news li:first-child::before { top: 9px; }
+.news li::before { content: ""; position: absolute; left: 2px; top: 21px; width: 7px; height: 7px; border-radius: 50%; background: var(--sc); }
+.news li p { font-size: 0.95rem; }
+.news li .src { display: block; margin-top: 3px; }
+.dn { color: var(--down); font-weight: 600; font-variant-numeric: tabular-nums; }
+.up { color: var(--up); font-weight: 600; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.two .panel { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.two ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 0.92rem; }
+.two h3 { font-size: 0.95rem; }
+
+.callout { border-left: 3px solid var(--c5); padding: 4px 0 4px 14px; color: var(--fg); font-size: 0.93rem; }
+
+/* prompts */
+.prompts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.prompts li { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 10px 10px 16px; }
+.prompts .prompt-text { flex: 1; min-width: 0; font-size: 0.93rem; }
+.prompts button {
+  flex: none; font: 600 0.8rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer;
+}
+.prompts button:hover { filter: brightness(0.97); }
+
+footer { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; }
+footer p { max-width: 75ch; }
+
+@media (max-width: 720px) {
+  .flow-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .wrap { padding-block: 28px 48px; gap: 44px; }
+  .terms, .two { grid-template-columns: minmax(0, 1fr); }
+  .week-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .panel { padding: 16px; }
+}
+@media (max-width: 380px) {
+  .flow-row { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+
+<header class="intro">
+  <span class="eyebrow">Learning notes · as of Monday, Nov 16, 2026</span>
+  <h1>Five sectors, starting from zero</h1>
+  <p class="lede">A beginner's map of AI chips, the infrastructure behind them, games, Big Tech and this month's hot topics. For each one: what the business actually does, who the main companies are, the words you'll hear, and what is happening right now.</p>
+  <div class="notes">
+    <span class="note">Built from news reports, linked inline</span>
+    <span class="note">No live prices yet</span>
+    <span class="note">Educational, not investment advice</span>
+  </div>
+  <nav class="toc" aria-label="Sectors">
+    <a href="#chips" class="s1"><span class="dot"></span>1 · AI chips</a>
+    <a href="#infra" class="s2"><span class="dot"></span>2 · Memory, data centers, power</a>
+    <a href="#games" class="s3"><span class="dot"></span>3 · Games</a>
+    <a href="#bigtech" class="s4"><span class="dot"></span>4 · Big Tech</a>
+    <a href="#hot" class="s5"><span class="dot"></span>5 · Tesla &amp; hot topics</a>
+  </nav>
+</header>
+
+<!-- THIS WEEK -->
+<div class="block">
+  <span class="eyebrow">This week matters more than most</span>
+  <div class="panel week">
+    <div class="week-row">
+      <span class="when">Tue Nov 17</span>
+      <p><strong>Nvidia reports quarterly results</strong> after the market closes. It is the first report since its CEO resigned, and it usually sets the mood for chips, data centers and Big Tech all at once.<span class="chips"><span class="dot s1"></span><span class="dot s2"></span><span class="dot s4"></span></span></p>
+    </div>
+    <div class="week-row">
+      <span class="when">Wed Nov 18</span>
+      <p><strong>Anthropic's IPO is expected to price.</strong> That sets the price that early buyers pay.<span class="chips"><span class="dot s5"></span></span></p>
+    </div>
+    <div class="week-row">
+      <span class="when">Thu Nov 19</span>
+      <p><strong>Anthropic (ticker ANT) is expected to start trading on Nasdaq</strong>, and <strong>GTA VI launches</strong>, the biggest test Take-Two has faced in a decade.<span class="chips"><span class="dot s5"></span><span class="dot s3"></span></span></p>
+    </div>
+    <div class="week-row">
+      <span class="when">Mid-Dec</span>
+      <p><strong>Federal Reserve meeting.</strong> In early November, markets priced a likely rate <em>hike</em>, which weighs on expensive growth stocks.<span class="chips"><span class="dot s5"></span></span></p>
+    </div>
+  </div>
+</div>
+
+<!-- FOLLOW THE MONEY -->
+<div class="block">
+  <span class="eyebrow">The one idea that connects sectors 1, 2 and 4</span>
+  <h2>Follow the money</h2>
+  <p>Big Tech's spending on AI data centers is everyone else's revenue. When Microsoft, Google, Amazon and Meta raise their spending plans, the companies below them tend to rise together. When they cut, those companies fall together. That is why one Nvidia earnings report can move dozens of stocks.</p>
+  <div class="flow" role="img" aria-label="Big Tech capital spending flows to four groups: AI chip designers, chip manufacturing and memory, data centers, and power and equipment.">
+    <div class="flow-top s4">
+      <strong>Big Tech builds AI data centers</strong>
+      <span class="tk">MSFT · GOOGL · AMZN · META</span>
+      <span class="src" style="flex-basis:100%">About $200 billion of capital spending combined, in a single quarter (Jul–Sep 2026)</span>
+    </div>
+    <div class="flow-link">pays for</div>
+    <div class="flow-row">
+      <div class="node s1">
+        <span class="lab"><span class="dot"></span>Sector 1</span>
+        <strong>AI chips</strong>
+        <p>Designed by these companies, the brains of every AI server.</p>
+        <span class="tk tks">NVDA · AMD · AVGO</span>
+      </div>
+      <div class="node s1">
+        <span class="lab"><span class="dot"></span>Sectors 1–2</span>
+        <strong>Factories &amp; memory</strong>
+        <p>Manufacture the chips and the memory stacked beside them.</p>
+        <span class="tk tks">TSM · SK Hynix · MU</span>
+      </div>
+      <div class="node s2">
+        <span class="lab"><span class="dot"></span>Sector 2</span>
+        <strong>Data centers</strong>
+        <p>Buildings that house the chips, sometimes rented out.</p>
+        <span class="tk tks">IREN · CRWV · NBIS</span>
+      </div>
+      <div class="node s2">
+        <span class="lab"><span class="dot"></span>Sector 2</span>
+        <strong>Power &amp; gear</strong>
+        <p>Electricity, turbines, cooling and grid equipment.</p>
+        <span class="tk tks">VST · CEG · GEV</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TERMS -->
+<div class="block">
+  <span class="eyebrow">Read these once and every article gets easier</span>
+  <h2>Seven terms that come up everywhere</h2>
+  <dl class="terms">
+    <div><dt>Market cap</dt><dd>Share price × number of shares. What the market says the whole company is worth.</dd></div>
+    <div><dt>Revenue growth</dt><dd>How much more a company sold than a year earlier. Faster growth usually earns a higher valuation.</dd></div>
+    <div><dt>Gross margin</dt><dd>The share of each sales dollar left after the direct cost of making the product. High margins signal pricing power.</dd></div>
+    <div><dt>P/E ratio</dt><dd>Share price ÷ yearly profit per share: roughly how many years of today's profit you are paying for. "Forward P/E" uses next year's expected profit.</dd></div>
+    <div><dt>Capex</dt><dd>Capital expenditure: money spent on long-lasting things like buildings, chips and power plants.</dd></div>
+    <div><dt>Free cash flow</dt><dd>Cash left after running the business and paying capex. Big Tech's is shrinking now because AI capex is so large.</dd></div>
+    <div><dt>Guidance</dt><dd>A company's own forecast for the next quarter or year. Stocks often react more to guidance than to the results themselves.</dd></div>
+    <div><dt>Earnings report</dt><dd>The results every public company publishes four times a year, followed by a call where management takes questions. The big moves happen the next day.</dd></div>
+  </dl>
+</div>
+
+<!-- SECTOR 1 -->
+<section class="sector s1" id="chips">
+  <div class="sector-head">
+    <span class="tag"><span class="dot"></span>Sector 1</span>
+    <h2>AI chips</h2>
+    <a class="deeper" href="https://claude.ai/artifact/JfRPRWfJcdke7rCqFeHAEH">Go deeper: AI Chips Deep Dive →</a>
+  </div>
+
+  <div class="prose">
+    <p>Building a modern chip takes three different kinds of company. <strong>Designers</strong> like Nvidia draw the chip but own no factory. A <strong>foundry</strong>, almost always TSMC for the most advanced chips, manufactures it. <strong>Equipment makers</strong> like ASML build the machines the foundry uses.</p>
+    <p>AI runs on <strong>accelerators</strong>: Nvidia's GPUs, AMD's competing GPUs, or custom chips that Broadcom co-designs for companies like Google. Each one is packaged next to stacks of fast memory (more on that in sector 2). Nvidia's edge is partly hardware and partly <strong>CUDA</strong>, the software most AI developers already write for.</p>
+  </div>
+
+  <div class="sub">
+    <h3>Who's who</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Ticker</th><th>Company</th><th>What they do</th></tr></thead>
+      <tbody>
+        <tr><td class="t tk">NVDA</td><td class="n">Nvidia</td><td>Designs GPUs, the dominant AI chip, plus the CUDA software developers rely on.</td></tr>
+        <tr><td class="t tk">AMD</td><td class="n">AMD</td><td>The main GPU challenger (Instinct line). Also makes PC and server processors.</td></tr>
+        <tr><td class="t tk">AVGO</td><td class="n">Broadcom</td><td>Co-designs custom AI chips for big customers, Google's TPUs among them, and makes networking chips.</td></tr>
+        <tr><td class="t tk">TSM</td><td class="n">TSMC</td><td>Manufactures the most advanced chips for nearly everyone, including Nvidia, Apple and AMD. Based in Taiwan.</td></tr>
+        <tr><td class="t tk">ASML</td><td class="n">ASML</td><td>The only maker of EUV lithography machines, required for leading-edge chips. Dutch.</td></tr>
+        <tr><td class="t tk">INTC</td><td class="n">Intel</td><td>Designs and builds its own processors; trying to win outside customers for its factories.</td></tr>
+        <tr><td class="t tk">ARM</td><td class="n">Arm</td><td>Licenses chip blueprints used in nearly every phone and a growing share of servers.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="sub">
+    <h3>Words you'll hear</h3>
+    <dl class="terms">
+      <div><dt>Fabless</dt><dd>A chip company that designs but doesn't manufacture. Nvidia, AMD and Broadcom are fabless.</dd></div>
+      <div><dt>Node (3nm, 2nm)</dt><dd>A generation of manufacturing technology. Smaller numbers mean newer, denser, more efficient chips.</dd></div>
+      <div><dt>GPU vs. ASIC</dt><dd>A GPU is a general-purpose accelerator. An ASIC is a custom chip built for one customer's workload.</dd></div>
+      <div><dt>Data center revenue</dt><dd>Nvidia's most watched line: sales of AI chips and systems to cloud and AI companies.</dd></div>
+      <div><dt>Export controls</dt><dd>US rules limiting which advanced chips can be sold to China. Changes can swing revenue.</dd></div>
+      <div><dt>Cyclical</dt><dd>Chip demand has always moved in booms and busts. Investors argue over whether AI changes that.</dd></div>
+    </dl>
+  </div>
+
+  <div class="sub">
+    <h3>What's happening now</h3>
+    <ul class="news">
+      <li><p><strong>Nvidia lost its CEO.</strong> Founder Jensen Huang resigned on Nov 12. CFO Colette Kress is interim CEO while the board searches for a permanent one. Nvidia gave no reason; press reports tie it to personal allegations. Some reports say Huang has discussed a return, which is unconfirmed.</p>
+        <span class="src"><a href="https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000082/nvidiaannouncesceotransiti.htm">Nvidia 8-K filing</a> · <a href="https://www.cnbc.com/2026/11/12/nvidia-jensen-huang-ceo-live-updates.html">CNBC</a> · <a href="https://www.cnn.com/2026/11/12/tech/jensen-huang-nvidia-resigns">CNN</a> · <a href="https://www.tradingkey.com/analysis/stocks/us-stocks/262307008-us-nvda-nasdaq-futures-nvidia-jensen-huang-anthropic-ipo-tradingkey">TradingKey</a></span></li>
+      <li><p><strong>Money rotated to rivals.</strong> Nvidia fell <span class="dn">about 11%</span> that week, while AMD rose as much as <span class="up">30%</span> and Broadcom <span class="up">24%</span>. Both gave some back on Friday, with AMD <span class="dn">−8.75%</span> and Broadcom <span class="dn">−4.76%</span>.</p>
+        <span class="src"><a href="https://www.cnbc.com/2026/11/13/nvidia-jensen-huang-affairs-amd-broadcom-tsmc.html">CNBC</a> · <a href="https://247wallst.com/investing/2026/11/15/amd-vs-broadcom-with-nvdas-jensen-huang-gone-which-ai-stock-wins-the-most/">24/7 Wall St.</a></span></li>
+      <li><p><strong>The selloff spread to Asia today.</strong> TSMC closed at NT$2,215, down from NT$2,350 on Nov 13, and SK Hynix fell about 8%.</p>
+        <span class="src"><a href="https://coinpaper.com/38921/ai-chip-stocks-crash-sk-hynix-falls-8-tsmc-drops-6-ahead-of-nvidia-earnings">Coinpaper</a></span></li>
+      <li><p><strong>Broadcom's AI business is growing fast.</strong> AI chip revenue was reported at $16.7B last quarter, with $21.7B guided for the next.</p>
+        <span class="src"><a href="https://finance.yahoo.com/markets/stocks/articles/amd-vs-broadcom-nvda-jensen-171640410.html">Yahoo Finance</a> · <a href="https://247wallst.com/investing/2026/11/15/amd-vs-broadcom-with-nvdas-jensen-huang-gone-which-ai-stock-wins-the-most/">24/7 Wall St.</a></span></li>
+    </ul>
+  </div>
+
+  <div class="two">
+    <div class="panel"><h3>What moves these stocks</h3><ul>
+      <li>Big Tech raising or cutting its spending plans</li>
+      <li>Data center revenue and gross margin at earnings</li>
+      <li>Supply limits at TSMC and in memory</li>
+      <li>China export rules</li>
+      <li>New chip generations, and now Nvidia's leadership</li>
+    </ul></div>
+    <div class="panel"><h3>Risks</h3><ul>
+      <li>A handful of huge customers buy most AI chips</li>
+      <li>Boom-and-bust history of chip demand</li>
+      <li>Most advanced manufacturing is concentrated in Taiwan</li>
+      <li>Prices already assume years of growth</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- SECTOR 2 -->
+<section class="sector s2" id="infra">
+  <div class="sector-head">
+    <span class="tag"><span class="dot"></span>Sector 2</span>
+    <h2>Memory, data centers and power</h2>
+    <a class="deeper" href="https://claude.ai/artifact/YHuiNNUqNfbSJ46JjqbufD">Go deeper: Memory &amp; Power Deep Dive →</a>
+  </div>
+
+  <div class="prose">
+    <p>An AI data center needs more than chips. It needs <strong>memory</strong>, a <strong>building</strong>, <strong>cooling</strong>, and an enormous amount of <strong>electricity</strong>. Each of those has become its own AI investment theme.</p>
+    <p><strong>Memory.</strong> HBM (high-bandwidth memory) is ordinary DRAM memory stacked into towers and placed right beside each GPU so it can be fed data fast enough. Only three companies make it at scale: SK Hynix, the leader and Nvidia's main supplier, plus Samsung and Micron.</p>
+    <p><strong>Data centers.</strong> Someone has to own the building and the power hookup. Some former bitcoin miners, IREN among them, already had both, and now rent GPU capacity to tech giants. These are often called <em>neoclouds</em>.</p>
+    <p><strong>Power.</strong> A large AI campus can draw as much electricity as a small city. Getting a grid connection is now often the slowest step, so power plant owners and equipment makers trade like AI stocks too.</p>
+  </div>
+
+  <div class="sub">
+    <h3>Who's who</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Ticker</th><th>Company</th><th>What they do</th></tr></thead>
+      <tbody>
+        <tr><td class="t tk">SKHY · 000660</td><td class="n">SK Hynix</td><td>Korean memory maker and the HBM leader. Trades in Seoul, and in the US as SKHY.</td></tr>
+        <tr><td class="t tk">MU</td><td class="n">Micron</td><td>The US memory maker, third in HBM.</td></tr>
+        <tr><td class="t tk">005930</td><td class="n">Samsung</td><td>Largest memory maker overall, catching up in HBM. Trades in Seoul.</td></tr>
+        <tr><td class="t tk">IREN</td><td class="n">IREN</td><td>Former bitcoin miner turned AI cloud, with its own data centers and power. Large Microsoft contract.</td></tr>
+        <tr><td class="t tk">CRWV</td><td class="n">CoreWeave</td><td>The biggest neocloud, renting Nvidia GPUs to AI labs and Big Tech.</td></tr>
+        <tr><td class="t tk">NBIS</td><td class="n">Nebius</td><td>Neocloud based in Amsterdam, listed on Nasdaq.</td></tr>
+        <tr><td class="t tk">VST</td><td class="n">Vistra</td><td>Owns gas and nuclear plants, with a large Texas footprint; sells power to data centers.</td></tr>
+        <tr><td class="t tk">CEG</td><td class="n">Constellation</td><td>Largest US nuclear fleet; has a 20-year deal to supply Microsoft from a restarted Three Mile Island unit.</td></tr>
+        <tr><td class="t tk">GEV</td><td class="n">GE Vernova</td><td>Gas turbines and grid equipment, with an order backlog swollen by data centers.</td></tr>
+        <tr><td class="t tk">VRT</td><td class="n">Vertiv</td><td>Cooling and power equipment inside data centers.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="sub">
+    <h3>Words you'll hear</h3>
+    <dl class="terms">
+      <div><dt>HBM / HBM4</dt><dd>High-bandwidth memory and its newest generation. The scarcest part of an AI chip package.</dd></div>
+      <div><dt>Wafer</dt><dd>A silicon disc that chips are cut from. Memory capacity is quoted in wafers per month.</dd></div>
+      <div><dt>MW / GW</dt><dd>Megawatts and gigawatts. AI data centers are now sized by how much power they draw, not by floor space.</dd></div>
+      <div><dt>Neocloud</dt><dd>A newer company that rents GPU capacity, separate from Amazon, Microsoft and Google.</dd></div>
+      <div><dt>PPA</dt><dd>Power purchase agreement: a long-term contract to buy electricity at a set price.</dd></div>
+      <div><dt>Backlog</dt><dd>Orders signed but not yet delivered. A growing backlog means future revenue is lined up.</dd></div>
+    </dl>
+  </div>
+
+  <div class="sub">
+    <h3>What's happening now</h3>
+    <ul class="news">
+      <li><p><strong>SK Hynix is still expanding.</strong> It says its HBM capacity is essentially sold out through 2029. Korean press reports a plan to add at least 20,000 HBM4 wafers a month; the company hasn't confirmed it.</p>
+        <span class="src"><a href="https://fourweekmba.com/ai-sk-hynix-plans-20000-more-hbm4-wafers-a-month-etnews-says/">FourWeekMBA (citing ETNews)</a> · <a href="https://www.trendforce.com/news/2026/11/16/news-sk-hynix-reportedly-plans-new-hbm4-equipment-orders-with-pt6-in-focus-despite-nvidia-uncertainty/">TrendForce</a></span></li>
+      <li><p><strong>Memory stocks have dropped anyway.</strong> SK Hynix's US shares are down about <span class="dn">16%</span> over the past month and Micron about <span class="dn">21%</span>. Analysts worry that new capacity from all three makers lands in 2028–29 just as HBM growth slows.</p>
+        <span class="src"><a href="https://finance.yahoo.com/markets/stocks/articles/sk-hynix-down-16-month-190321820.html">Yahoo Finance</a> · <a href="https://247wallst.com/investing/2026/11/14/samsungs-34-billion-hbm-bet-raises-memory-glut-risks/">24/7 Wall St.</a></span></li>
+      <li><p><strong>Antitrust case moves ahead.</strong> On Nov 14 a US judge refused to dismiss a class action accusing Samsung, Micron and SK Hynix of fixing DRAM prices.</p>
+        <span class="src"><a href="https://wccftech.com/federal-judge-rejects-memory-makers-defense-samsung-micron-sk-hynix-dram-shortage-lawsuit">Wccftech</a></span></li>
+      <li><p><strong>IREN's Microsoft deal is being delivered.</strong> The 5-year, $9.7B contract (signed Nov 2025, 20% prepaid) gives Microsoft Nvidia GPU capacity in Texas. Microsoft has accepted the first of four 50MW phases. IREN targets 480MW of AI cloud capacity in 2026 and 1.2GW in 2027.</p>
+        <span class="src"><a href="https://iren.gcs-web.com/news-releases/news-release-details/iren-secures-97bn-ai-cloud-contract-microsoft">IREN release</a> · <a href="https://www.stocktitan.net/news/IREN/iren-delivers-horizon-1-to-microsoft-and-achieves-nvidia-exemplar-12sdoc82j9x8.html">StockTitan</a></span></li>
+      <li><p><strong>Power stocks fell after the midterms.</strong> After Democrats swept the midterm elections, Vistra fell <span class="dn">15.4%</span>, GE Vernova <span class="dn">11.5%</span> and Constellation <span class="dn">9.2%</span> in a day, while renewable energy stocks rallied.</p>
+        <span class="src"><a href="https://finance.yahoo.com/energy/articles/ai-data-center-stocks-dip-113427491.html">Yahoo Finance</a></span></li>
+    </ul>
+  </div>
+
+  <div class="two">
+    <div class="panel"><h3>What moves these stocks</h3><ul>
+      <li>Big Tech spending plans, again</li>
+      <li>New long-term contracts, like IREN's with Microsoft</li>
+      <li>Memory prices and supply</li>
+      <li>Power prices, energy policy and politics</li>
+      <li>Interest rates, since these companies borrow heavily to build</li>
+    </ul></div>
+    <div class="panel"><h3>Risks</h3><ul>
+      <li>Memory has a long history of booms followed by gluts</li>
+      <li>Heavy reliance on one or two customers</li>
+      <li>Expensive debt with Treasury yields near 5%</li>
+      <li>If AI spending slows, this layer feels it first</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- SECTOR 3 -->
+<section class="sector s3" id="games">
+  <div class="sector-head">
+    <span class="tag"><span class="dot"></span>Sector 3</span>
+    <h2>Games</h2>
+  </div>
+
+  <div class="prose">
+    <p>Game companies make money four ways. They sell games up front (a $70 console release). They sell extras inside free games, like skins or Robux. They sell subscriptions such as Game Pass. And platforms take a cut: consoles and app stores typically keep about 30% of each sale.</p>
+    <p>It's a <strong>hits business</strong>. One big release can make or break a publisher's year, so release dates, delays and launch sales move the stocks. This sector mostly runs on its own calendar, separate from the AI money chain above.</p>
+  </div>
+
+  <div class="sub">
+    <h3>Who's who</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Ticker</th><th>Company</th><th>What they do</th></tr></thead>
+      <tbody>
+        <tr><td class="t tk">TTWO</td><td class="n">Take-Two</td><td>Owns Rockstar (Grand Theft Auto, Red Dead) and 2K (NBA 2K). GTA VI launches Nov 19.</td></tr>
+        <tr><td class="t tk">RBLX</td><td class="n">Roblox</td><td>A platform where users build and play each other's games. Earns from Robux and pays creators a share.</td></tr>
+        <tr><td class="t tk">NTDOY</td><td class="n">Nintendo</td><td>Makes the Switch 2 console and its own franchises like Mario and Zelda. US shares trade over the counter.</td></tr>
+        <tr><td class="t tk">SONY</td><td class="n">Sony</td><td>PlayStation, alongside music, movies and camera sensors.</td></tr>
+        <tr><td class="t tk">MSFT</td><td class="n">Microsoft</td><td>Xbox and Activision Blizzard (Call of Duty). Games are a small slice of Microsoft.</td></tr>
+        <tr><td class="t tk">U</td><td class="n">Unity</td><td>Game engine and advertising tools used by many mobile games.</td></tr>
+        <tr><td class="t tk">TCEHY</td><td class="n">Tencent</td><td>The world's largest games company by revenue. Owns Riot Games and stakes in many studios.</td></tr>
+        <tr class="gone"><td class="t tk">EA</td><td class="n">Electronic Arts</td><td>No longer public. Bought for $55B ($210 a share) by a group led by Saudi Arabia's PIF; delisted Aug 4, 2026.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="sub">
+    <h3>Words you'll hear</h3>
+    <dl class="terms">
+      <div><dt>Net bookings</dt><dd>Sales made in a period, including digital purchases not yet counted as revenue. The industry's headline number.</dd></div>
+      <div><dt>Free-to-play</dt><dd>Free to download, paid through in-game purchases. Fortnite and most Roblox games work this way.</dd></div>
+      <div><dt>DAU</dt><dd>Daily active users. Roblox reports it every quarter.</dd></div>
+      <div><dt>Bookings per DAU</dt><dd>How much the average daily player spends. Rising engagement with falling spending is a warning sign.</dd></div>
+      <div><dt>Live service</dt><dd>A game updated for years with new content and purchases, instead of sold once.</dd></div>
+      <div><dt>Console cycle</dt><dd>Sales surge after a new console launches, then fade until the next one.</dd></div>
+    </dl>
+  </div>
+
+  <div class="sub">
+    <h3>What's happening now</h3>
+    <ul class="news">
+      <li><p><strong>GTA VI arrives Thursday.</strong> Take-Two said preorders are far ahead of plan, and the stock jumped about <span class="up">8%</span> after its Nov 10 report. Net bookings fell <span class="dn">18%</span> that quarter, but it raised its full-year revenue outlook to $7.98–8.18B. Shares slipped <span class="dn">2.5%</span> to $222.21 today.</p>
+        <span class="src"><a href="https://finance.yahoo.com/markets/stocks/articles/two-jumps-8-gta-vi-155157462.html">Yahoo Finance</a> · <a href="https://www.schaeffersresearch.com/content/news/2026/11/16/take-two-interactive-stock-slips-ahead-of-gta-vi-drop">Schaeffer's</a></span></li>
+      <li><p><strong>Is the launch already priced in?</strong> One analysis notes Take-Two trades at about 5.7 times sales before GTA VI has shipped. That's a classic "buy the rumor, sell the news" setup that traders watch around big launches.</p>
+        <span class="src"><a href="https://www.fool.com/investing/2026/11/11/gta-vi-days-away-don-t-expect-gta-v-style-returns-from-take-two-stock-at-5-7-times-sales/">Motley Fool</a> · <a href="https://finance.yahoo.com/markets/stocks/articles/imminent-gta-vi-launch-already-142613695.html">Yahoo Finance</a></span></li>
+      <li><p><strong>Roblox has had a rough year.</strong> Shares are down sharply over the past year (about <span class="dn">63%</span> in one report) as player spending weakened.</p>
+        <span class="src"><a href="https://www.fool.com/investing/2026/10/18/should-you-buy-these-game-stocks-before-gta-6/">Motley Fool</a></span></li>
+      <li><p><strong>EA went private in August</strong> after the $55B buyout closed, so one of the biggest publishers is no longer a stock you can buy.</p>
+        <span class="src"><a href="https://www.gameinformer.com/2026/08/04/electronic-arts-has-been-fully-acquired-by-trio-of-investor-groups-and-is-now-private">Game Informer</a></span></li>
+    </ul>
+  </div>
+
+  <div class="two">
+    <div class="panel"><h3>What moves these stocks</h3><ul>
+      <li>Release dates, and especially delays</li>
+      <li>Launch sales and player counts</li>
+      <li>Bookings guidance</li>
+      <li>Engagement and spending per player</li>
+      <li>Consumer spending overall</li>
+    </ul></div>
+    <div class="panel"><h3>Risks</h3><ul>
+      <li>One flop or delay can sink a year</li>
+      <li>Budgets for big games keep climbing</li>
+      <li>Players cut back on extras when money is tight</li>
+      <li>Regulation of child safety and paid loot boxes</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- SECTOR 4 -->
+<section class="sector s4" id="bigtech">
+  <div class="sector-head">
+    <span class="tag"><span class="dot"></span>Sector 4</span>
+    <h2>Big Tech</h2>
+  </div>
+
+  <div class="prose">
+    <p>Each of these companies has a profit engine that pays for its AI ambitions. Microsoft sells Office and its Azure cloud. Alphabet sells search and YouTube ads plus Google Cloud. Amazon has its store, ads and AWS. Meta sells ads across Facebook, Instagram and WhatsApp. Apple sells iPhones and services.</p>
+    <p>Amazon, Microsoft and Google also run the three big <strong>clouds</strong>, renting computing power to everyone else. The question hanging over all of them right now: will AI earn back the record amounts they are spending on data centers?</p>
+  </div>
+
+  <div class="sub">
+    <h3>Who's who</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Ticker</th><th>Company</th><th>What they do</th></tr></thead>
+      <tbody>
+        <tr><td class="t tk">MSFT</td><td class="n">Microsoft</td><td>Azure cloud, Office and Windows, Xbox. A major OpenAI partner.</td></tr>
+        <tr><td class="t tk">GOOGL</td><td class="n">Alphabet</td><td>Google Search, YouTube, Google Cloud, its own TPU chips, and Waymo robotaxis.</td></tr>
+        <tr><td class="t tk">AMZN</td><td class="n">Amazon</td><td>Online store, ads, and AWS, the largest cloud. A major investor in Anthropic.</td></tr>
+        <tr><td class="t tk">META</td><td class="n">Meta</td><td>Ads on Facebook, Instagram and WhatsApp; Llama AI models. Has no public cloud to rent out.</td></tr>
+        <tr><td class="t tk">AAPL</td><td class="n">Apple</td><td>iPhone plus services like the App Store and iCloud. Spends far less on AI data centers than the others.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="src">Together with Nvidia and Tesla, these make up the "Magnificent Seven," the stocks that drive much of the S&amp;P 500.</p>
+  </div>
+
+  <div class="sub">
+    <h3>Words you'll hear</h3>
+    <dl class="terms">
+      <div><dt>Hyperscaler</dt><dd>A company running cloud data centers at giant scale: Amazon, Microsoft, Google, and often Meta.</dd></div>
+      <div><dt>Cloud growth</dt><dd>The growth rates of Azure, AWS and Google Cloud. Probably the most watched numbers each quarter.</dd></div>
+      <div><dt>Operating cash flow</dt><dd>Cash the business generates before capex. Compare it with capex to see whether spending is self-funded.</dd></div>
+      <div><dt>Finance leases</dt><dd>Data centers rented long-term instead of bought. Some trackers count them as capex and some don't, which is why totals differ.</dd></div>
+    </dl>
+  </div>
+
+  <div class="sub">
+    <h3>What's happening now <span class="src" style="font-weight:400">· from late-October earnings</span></h3>
+    <ul class="news">
+      <li><p><strong>Record spending.</strong> Amazon, Alphabet, Meta and Microsoft spent roughly <span class="num">$202–209B</span> on capex combined in one quarter, depending on whether leases are counted.</p>
+        <span class="src"><a href="https://www.useluminix.com/reports/industry-analysis/hyperscaler-capex-q3-2026">Luminix</a> · <a href="https://www.technology.org/2026/11/09/big-tech-ai-capex-free-cash-flow-debt-q3-2026/">Technology.org</a></span></li>
+      <li><p><strong>Microsoft stood out.</strong> Azure grew <span class="up">48%</span>, it trimmed its capex forecast to $170B from $175B, and its operating cash flow covered its spending.</p>
+        <span class="src"><a href="https://averin.com/en/journal/ruslan-averin-big-tech-q3-2026-earnings-ai-capex-stress-test-microsoft-alphabet-meta-amazon-apple">Averin</a> · <a href="https://www.technology.org/2026/11/09/big-tech-ai-capex-free-cash-flow-debt-q3-2026/">Technology.org</a></span></li>
+      <li><p><strong>Alphabet spent more than it took in.</strong> Capex was $51.4B against $42.3B of operating cash flow. It kept its 2026 range of $195–205B and said 2027 will rise significantly. One report has the stock <span class="dn">−12.6%</span> that day.</p>
+        <span class="src"><a href="https://averin.com/en/journal/ruslan-averin-big-tech-q3-2026-earnings-ai-capex-stress-test-microsoft-alphabet-meta-amazon-apple">Averin</a></span></li>
+      <li><p><strong>Amazon and Meta both fell on earnings.</strong> AWS grew <span class="up">39%</span>, its fastest in nearly five years, but quarterly capex hit $77.3B and the holiday forecast was weak. Meta's revenue grew <span class="up">26%</span>, but its free cash flow turned negative and shares dropped about <span class="dn">7%</span>.</p>
+        <span class="src"><a href="https://applescoop.org/story/microsoft-meta-amazon-earnings-q3-2026-ai-capex-winners-losers">AppleScoop</a> · <a href="https://www.technology.org/2026/11/09/big-tech-ai-capex-free-cash-flow-debt-q3-2026/">Technology.org</a></span></li>
+    </ul>
+    <p class="src">These figures come from trackers that don't always agree with each other. The companies' 10-Q filings are the final word.</p>
+  </div>
+
+  <div class="two">
+    <div class="panel"><h3>What moves these stocks</h3><ul>
+      <li>Cloud growth rates</li>
+      <li>Capex guidance, both up and down</li>
+      <li>Ad revenue (Google, Meta, Amazon)</li>
+      <li>Free cash flow</li>
+      <li>Antitrust rulings</li>
+    </ul></div>
+    <div class="panel"><h3>Risks</h3><ul>
+      <li>Spending running ahead of AI revenue</li>
+      <li>More borrowing to fund data centers</li>
+      <li>Regulators breaking up or restricting businesses</li>
+      <li>AI chatbots eating into search ads</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- SECTOR 5 -->
+<section class="sector s5" id="hot">
+  <div class="sector-head">
+    <span class="tag"><span class="dot"></span>Sector 5</span>
+    <h2>Tesla and this month's hot topics</h2>
+  </div>
+
+  <div class="sub">
+    <h3>Tesla <span class="tk" style="color:var(--c5)">TSLA</span></h3>
+    <div class="prose">
+      <p>Tesla sells electric cars and big batteries for homes and power grids. But most of its stock value is a bet on two future businesses: <strong>robotaxis</strong> and <strong>Optimus</strong> humanoid robots. That's why it's valued far above other car makers, and why autonomy news moves the stock more than car sales do.</p>
+    </div>
+    <ul class="news">
+      <li><p><strong>Robotaxi is in 8 cities</strong>, 5 in Texas and 3 in Florida, after San Antonio launched Nov 9. Most cars are Model Ys; the purpose-built Cybercab runs only in Austin. Texas lists 1,302 registered Tesla autonomous vehicles against Waymo's 1,297, though registered doesn't mean in service.</p>
+        <span class="src"><a href="https://ohsoft.net/en/blog/ai-news-2026-11-week3/">OhSoft weekly</a> · <a href="https://www.sec.gov/Archives/edgar/data/0001318605/000162828026066775/tsla-20260930.htm">Tesla Q3 10-Q</a></span></li>
+      <li><p><strong>Optimus will probably be rented, not sold</strong>, according to Musk, at around $30,000 falling toward $20,000. Deliveries to outside customers are expected around the end of 2027.</p>
+        <span class="src"><a href="https://www.notateslaapp.com/news/4959/musk-tesla-will-rent-optimus-robots-instead-of-selling-them">Not a Tesla App</a></span></li>
+      <li><p><strong>Analysts are split on the valuation</strong>, citing Optimus delays, weak cash generation, heavy spending needs and Waymo's head start.</p>
+        <span class="src"><a href="https://www.tokenpost.com/news/insights/57913">TokenPost</a></span></li>
+    </ul>
+    <p class="src">Watch: quarterly deliveries, car gross margin, FSD adoption, new robotaxi cities and safety data, and the energy storage business.</p>
+  </div>
+
+  <div class="sub">
+    <h3>The Anthropic IPO <span class="tk" style="color:var(--c5)">ANT</span></h3>
+    <p class="callout">Anthropic makes Claude, the AI that wrote this guide. Read this section with that in mind, and check other sources before acting on it.</p>
+    <ul class="news">
+      <li><p><strong>Timing.</strong> Expected to price Wednesday, Nov 18, and start trading on Nasdaq Thursday, Nov 19, under the ticker ANT. Demand is reportedly about 7 times the shares on offer. Reported valuation targets vary, from around $1.4 trillion to earlier talk of up to $2 trillion.</p>
+        <span class="src"><a href="https://www.anthropic.com/news/roadshow-launch">Anthropic</a> · <a href="https://finance.yahoo.com/technology/article/anthropic-ipo-claude-maker-to-begin-trading-on-thursday-nov-19-173550865.html">Yahoo Finance</a> · <a href="https://finance.yahoo.com/markets/stocks/articles/anthropic-ipo-reportedly-oversubscribed-7-035659320.html">Yahoo Finance</a></span></li>
+      <li><p><strong>How IPOs work for regular buyers.</strong> Big funds buy at the offer price the night before. Most individuals can only buy once trading opens, often well above that price for a hot deal. Robinhood's IPO Access lets customers request shares at the offer price, but allocations for popular IPOs tend to be small. Insiders usually can't sell until a lock-up ends, typically 90–180 days later, which can pressure the price.</p></li>
+      <li><p><strong>The skeptical view.</strong> A Fortune piece argues the AI stock boom is in its final stages as companies like this go public.</p>
+        <span class="src"><a href="https://fortune.com/2026/11/16/ai-boom-final-stages-anthropic-ipo-jobless-growth-50000-jobs-a-month/">Fortune</a></span></li>
+    </ul>
+  </div>
+
+  <div class="sub">
+    <h3>The backdrop every stock sits in</h3>
+    <ul class="news">
+      <li><p><strong>Interest rates are high and may rise.</strong> Ten-year Treasury yields are near 5%. In early November, markets put about 75% odds on a December Fed rate hike. Higher rates make future profits worth less today, which hits high-valuation growth stocks hardest and raises borrowing costs for data center builders.</p>
+        <span class="src"><a href="https://fffinstill.com/blog/weekly-market-tldr-2026-45">Weekly Market TLDR, Nov 2–8</a> · <a href="https://fffinstill.com/blog/weekly-market-tldr-2026-46">Nov 9–15</a></span></li>
+      <li><p><strong>Politics shifted.</strong> Democrats swept the midterms in early November. AI infrastructure and power stocks fell, and renewables rallied.</p>
+        <span class="src"><a href="https://finance.yahoo.com/energy/articles/ai-data-center-stocks-dip-113427491.html">Yahoo Finance</a></span></li>
+      <li><p><strong>Oil is around $89</strong>, held up by tensions in the Middle East.</p>
+        <span class="src"><a href="https://fffinstill.com/blog/weekly-market-tldr-2026-46">Weekly Market TLDR</a></span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- PROMPTS -->
+<div class="block">
+  <span class="eyebrow">Keep going</span>
+  <h2>Questions to ask Claude next</h2>
+  <ul class="prompts">
+    <li><span class="prompt-text">Walk me through Nvidia's Nov 17 earnings: which numbers to look at and what they mean.</span><button type="button" id="cp1" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Explain HBM memory like I'm new to this, and why SK Hynix leads.</span><button type="button" id="cp2" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Compare AMD and Broadcom's AI businesses in plain English.</span><button type="button" id="cp3" data-copy>Copy</button></li>
+    <li><span class="prompt-text">How does IREN make money, and what could go wrong?</span><button type="button" id="cp4" data-copy>Copy</button></li>
+    <li><span class="prompt-text">What happened to Roblox stock this year?</span><button type="button" id="cp5" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Explain how an IPO works, step by step.</span><button type="button" id="cp6" data-copy>Copy</button></li>
+    <li><span class="prompt-text">Give me a 5-question quiz on sector 1.</span><button type="button" id="cp7" data-copy>Copy</button></li>
+  </ul>
+</div>
+
+<footer>
+  <p><strong>Where this comes from.</strong> News reports and filings gathered on Nov 16, 2026, linked next to each item. Many are commentary sites, and numbers sometimes differ between sources. There are no live prices yet; they can be added once the Financial Datasets connector has credits.</p>
+  <p><strong>Not investment advice.</strong> This guide explains how sectors work and what is in the news. It doesn't recommend buying or selling anything. Anthropic, mentioned in sector 5, makes Claude, which wrote this page.</p>
+</footer>
+
+</div>
+
+<script>
+document.querySelectorAll('[data-copy]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var el = btn.parentElement.querySelector('.prompt-text');
+    var text = el.textContent.trim();
+    function done(label) { btn.textContent = label; setTimeout(function () { btn.textContent = 'Copy'; }, 1600); }
+    function fallback() {
+      try {
+        var r = document.createRange(); r.selectNodeContents(el);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        done('Selected');
+      } catch (e) { done('Copy failed'); }
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () { done('Copied'); }, fallback);
+    } catch (e) { fallback(); }
+  });
+});
+</script>
