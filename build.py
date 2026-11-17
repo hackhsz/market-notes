@@ -20,6 +20,7 @@ PAGES = [
     ("overview", "Overview", "A beginner's map of AI chips, AI infrastructure, games, Big Tech and Tesla."),
     ("buying-basics", "Buying basics", "How to size a position, read a quote, choose an order type and decide what price to pay."),
     ("momentum-lab", "Momentum lab", "Interactive momentum reader, rule tester, news-reaction simulator and exit-plan builder."),
+    ("discount-screen", "Discount screen", "Which AI, chip, game and tech stocks have fallen most, which are cheaper than usual, and why."),
     ("ai-chips", "AI chips", "How AI chips work, who earns what, Nvidia vs. custom chips, and how to read Nvidia's earnings."),
     ("memory-power", "Memory & power", "The memory boom and its cycle, how neoclouds like IREN make money, and the AI power squeeze."),
     ("games", "Games", "How game companies make money, GTA VI, Roblox, Nintendo and the rest of the sector."),

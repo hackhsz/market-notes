@@ -1,0 +1,465 @@
+<title>Discount Screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: Market Notes system at ~960px. A map (price drop vs valuation vs its own history) leads, then a filterable, sortable list of 31 stocks that expands into why-it-fell and trap risk. One accent hue; sectors encoded by marker shape plus direct ticker labels. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #151820;
+  --muted: #586070;
+  --line: #dde1e8;
+  --accent: #2b47cf;
+  --accent-soft: #e8ecfb;
+  --sc: #2b47cf;
+  --up: #17783f;
+  --down: #b83a2c;
+  --warn: #965c00;
+  --ok-bg: #e4f4ea; --warn-bg: #fbf0dc; --bad-bg: #fbe7e4;
+  --quad: #eef6f0;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+    --accent: #93a6ff; --accent-soft: #1c2340; --sc: #93a6ff;
+    --up: #5fd98f; --down: #f58a7d; --warn: #f0b259;
+    --ok-bg: #143222; --warn-bg: #33270f; --bad-bg: #3a1c19; --quad: #15241b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+  --accent: #93a6ff; --accent-soft: #1c2340; --sc: #93a6ff;
+  --up: #5fd98f; --down: #f58a7d; --warn: #f0b259;
+  --ok-bg: #143222; --warn-bg: #33270f; --bad-bg: #3a1c19; --quad: #15241b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 960px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 64px; display: flex; flex-direction: column; gap: 52px; }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 6vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.5rem, 4.2vw, 2rem); font-weight: 800; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 72ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.src { font-size: 0.82rem; color: var(--muted); }
+.src a { color: var(--muted); }
+header.intro { display: flex; flex-direction: column; gap: 16px; }
+.tag { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sc); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sc); }
+.lede { font-size: 1.12rem; }
+.disclaimer { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 0.93rem; max-width: none; }
+section { display: flex; flex-direction: column; gap: 16px; }
+.part-head { display: flex; flex-direction: column; gap: 8px; padding-top: 26px; border-top: 3px solid var(--sc); }
+.part-head .eyebrow { color: var(--sc); font-weight: 600; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+.callout { border-left: 3px solid var(--sc); padding: 4px 0 4px 14px; font-size: 0.95rem; }
+.short { list-style: none; margin: 0; padding: 0; }
+.short li { padding: 12px 0 12px 28px; border-top: 1px solid var(--line); position: relative; }
+.short li:first-child { border-top: 0; padding-top: 0; }
+.short li::before { content: ""; position: absolute; left: 4px; top: 21px; width: 12px; height: 2px; background: var(--sc); }
+.short li:first-child::before { top: 9px; }
+.lenses { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.lens { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lens .lab { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--sc); }
+.lens strong { font-family: var(--font-display); }
+.lens p { font-size: 0.88rem; color: var(--muted); }
+
+/* map */
+.map-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--muted); margin-bottom: 8px; }
+.map-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.map-legend svg { width: 14px; height: 14px; }
+.map-wrap { overflow-x: auto; }
+.map { width: 100%; min-width: 600px; height: auto; display: block; }
+.map text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.map .lbl { fill: var(--fg); font-weight: 600; font-size: 11px; }
+.map .grid { stroke: var(--line); stroke-width: 1; }
+.map .axis { stroke: var(--muted); stroke-width: 1; }
+.map .quad { fill: var(--quad); }
+.map .mk { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.map .mk.ps { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
+.map g.pt { cursor: pointer; }
+.map g.pt:hover .mk, .map g.pt:focus .mk { stroke: var(--fg); }
+.map g.pt:focus { outline: none; }
+.map .qlab { font-family: var(--font-body); font-size: 12px; fill: var(--muted); font-weight: 600; }
+.map-tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--bg); font-size: 0.8rem; padding: 6px 9px; border-radius: 6px; white-space: nowrap; opacity: 0; transition: opacity 0.1s; z-index: 3; }
+.map-box { position: relative; }
+
+/* screen list */
+.filters { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-end; }
+.ctl { display: flex; flex-direction: column; gap: 4px; }
+.ctl label, .ctl .l { font-size: 0.8rem; font-weight: 600; }
+select { font: 500 0.92rem var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { font: 600 0.82rem var(--font-body); color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+.count { font-size: 0.85rem; color: var(--muted); }
+.list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.row { border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: minmax(150px, 1.4fr) 84px 92px 76px minmax(120px, 1.2fr) 96px minmax(130px, 1.2fr) 14px; gap: 10px; align-items: center; padding: 12px 16px; }
+.row summary::-webkit-details-marker { display: none; }
+.row summary:hover { background: var(--bg); }
+.row .nm { display: flex; flex-direction: column; min-width: 0; }
+.row .nm b { font-family: var(--font-mono); font-size: 0.92rem; }
+.row .nm span { font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell { font-size: 0.86rem; font-variant-numeric: tabular-nums; min-width: 0; }
+.cell small { display: block; font-size: 0.7rem; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.03em; text-transform: uppercase; }
+.neg { color: var(--down); } .pos { color: var(--up); }
+.pill { display: inline-block; font-family: var(--font-mono); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { color: var(--up); background: var(--ok-bg); } .pill.warn { color: var(--warn); background: var(--warn-bg); } .pill.bad { color: var(--down); background: var(--bad-bg); } .pill.mid { color: var(--muted); border: 1px solid var(--line); }
+.chev { color: var(--muted); transition: transform 0.15s; font-size: 0.8rem; }
+.row[open] .chev { transform: rotate(90deg); }
+.detail { padding: 0 16px 16px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; font-size: 0.9rem; }
+.detail h4 { margin: 0 0 4px; font-size: 0.78rem; font-family: var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.detail .full { grid-column: 1 / -1; }
+.buckets { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.bk { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bk strong { font-size: 0.88rem; }
+.bk p { font-size: 0.8rem; color: var(--muted); }
+.checklist { list-style: none; margin: 0; padding: 0; counter-reset: c; }
+.checklist li { counter-increment: c; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.checklist li:first-child { border-top: 0; }
+.checklist li::before { content: counter(c); font-family: var(--font-mono); font-weight: 600; color: var(--sc); width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--sc); display: grid; place-items: center; font-size: 0.82rem; }
+.dates { display: grid; }
+.date-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 0.93rem; }
+.date-row:first-child { border-top: 0; padding-top: 0; }
+.date-row b { font-family: var(--font-mono); color: var(--sc); font-size: 0.85rem; }
+footer { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; }
+footer p { max-width: 80ch; }
+@media (max-width: 860px) {
+  .lenses { grid-template-columns: minmax(0, 1fr); }
+  .buckets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .row summary { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 14px; grid-template-areas: none; }
+  .row summary .cell.opt { display: none; }
+  .detail { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .wrap { padding-block: 28px 48px; gap: 44px; }
+  .buckets { grid-template-columns: minmax(0, 1fr); }
+  .date-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
+@media (prefers-reduced-motion: reduce) { .chev, .map-tip { transition: none; } }
+</style>
+
+<div class="wrap">
+
+<header class="intro">
+  <span class="tag"><span class="dot"></span>Skills · Screen · prices as of Nov 16, 2026 close</span>
+  <h1>Discount Screen: AI, chips, games and tech</h1>
+  <p class="lede">Which of 31 stocks have fallen the most, which are cheaper than they usually are, and the reason behind each discount. Built to answer one question honestly: is this cheap for a reason that can pass, or because the business got riskier?</p>
+  <p class="disclaimer"><strong>A screen, not a shopping list.</strong> It sorts stocks by price drop and by valuation against their own history, using public estimates that vary between sources. It doesn't say what to buy. Nvidia reports on Nov 17 and GTA VI launches Nov 19, so several rows can change within days.</p>
+</header>
+
+<section>
+  <div class="block" style="display:flex;flex-direction:column;gap:12px"><span class="eyebrow">If you only read one part</span><h2>The short version</h2></div>
+  <ul class="short">
+    <li><strong>Almost every AI and chip stock is 20–75% below its 52-week high.</strong> Last week stacked up Nvidia's CEO exit, a new US export-license rule for AI chips sent to Southeast Asia and Brazil (Nov 16), the midterm backlash against data centers, and Treasury yields above 5%.</li>
+    <li><strong>Several big, profitable companies trade below their usual valuation</strong> on forecast earnings: Nvidia most of all (about 12× vs. a typical 36×), plus Amazon, GE Vernova, Oracle, ASML and Vertiv. Each low number assumes today's earnings forecasts hold.</li>
+    <li><strong>Memory makers look cheapest of all (3–7×) because their profits are at a record.</strong> That's the classic cyclical trap: the multiple looks lowest right before earnings fall.</li>
+    <li><strong>The biggest price drops are mostly companies losing money or borrowing heavily:</strong> IREN, CoreWeave, Nebius, Roblox. Their prices fell because their risk rose.</li>
+    <li><strong>Analyst targets show +50% to +250% "upside" on many names.</strong> Targets lag sell-offs and usually get cut afterward. Treat them as stale.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="part-head"><span class="eyebrow">How to read it</span><h2>Three meanings of "on discount"</h2></div>
+  <div class="lenses">
+    <div class="lens"><span class="lab">1 · Price</span><strong>Below its high</strong><p>How far the price is from its 52-week high. Easy to see, but it says nothing about value: a stock can be 70% off and still expensive, or near its high and cheap.</p></div>
+    <div class="lens"><span class="lab">2 · Valuation</span><strong>Below its usual multiple</strong><p>Price ÷ next year's expected earnings (forward P/E), compared with the stock's own typical level over about 5 years. Unprofitable companies use price ÷ sales instead.</p></div>
+    <div class="lens"><span class="lab">3 · Opinion</span><strong>Below analyst targets</strong><p>Where analysts think the price will be in 12 months. Useful for direction, but targets trail big moves and are often cut right after a drop.</p></div>
+  </div>
+  <p class="callout"><strong>The trap to watch:</strong> a P/E falls when the price falls, <em>or</em> when the expected earnings were too high. If earnings estimates get cut next, a "cheap" 12× can become an ordinary 20× without the price moving at all.</p>
+</section>
+
+<section>
+  <div class="part-head"><span class="eyebrow">The map</span><h2>Price drop vs. valuation</h2></div>
+  <p>Right means further below its 52-week high. Down means cheaper than its own usual valuation. The shaded corner holds stocks that are both well off their highs <em>and</em> cheaper than usual. Hover or tab to a point for details.</p>
+  <div class="panel">
+    <div class="map-legend" aria-hidden="true">
+      <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="currentColor"/></svg>Chips</span>
+      <span><svg viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" fill="currentColor"/></svg>AI infrastructure</span>
+      <span><svg viewBox="0 0 14 14"><path d="M7 1 L13 12 L1 12 Z" fill="currentColor"/></svg>Games</span>
+      <span><svg viewBox="0 0 14 14"><path d="M7 1 L13 7 L7 13 L1 7 Z" fill="currentColor"/></svg>Big tech &amp; software</span>
+      <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="2"/></svg>Hollow = price ÷ sales (no profits)</span>
+    </div>
+    <div class="map-box"><div class="map-wrap"><svg class="map" id="map" viewBox="0 0 900 520" role="img" aria-label="Scatter map of stocks by percent below 52-week high and valuation versus their usual level"></svg></div><div class="map-tip" id="map-tip"></div></div>
+    <p class="src" style="margin-top:8px">Not plotted, because there's no reliable "usual" level: Micron and SK Hynix (earnings swing too much), Intel (its average was set on near-zero earnings), Nebius (its history includes a different business), Take-Two and Nintendo (sources disagree).</p>
+  </div>
+</section>
+
+<section>
+  <div class="part-head"><span class="eyebrow">The screen</span><h2>All 31 stocks</h2></div>
+  <div class="buckets">
+    <div class="bk"><span class="pill ok">Below usual</span><strong>Below its usual valuation</strong><p>Profitable, and cheaper than its own history on forecast earnings.</p></div>
+    <div class="bk"><span class="pill warn">Peak earnings?</span><strong>Cheap on maybe-peak profits</strong><p>Low multiple because profits are at a cyclical high.</p></div>
+    <div class="bk"><span class="pill bad">Higher risk</span><strong>Fallen, but riskier</strong><p>Losing money, heavy debt, big dilution, or shrinking business.</p></div>
+    <div class="bk"><span class="pill mid">About usual</span><strong>Around its usual valuation</strong><p>Fell or held, but priced about where it normally is.</p></div>
+    <div class="bk"><span class="pill mid">Still rich</span><strong>Still richly valued</strong><p>Above its usual multiple, or near its high.</p></div>
+  </div>
+  <div class="panel filters">
+    <div class="ctl"><span class="l">Sector</span><div class="seg" id="f-sector" role="group" aria-label="Sector filter">
+      <button type="button" data-v="all" aria-pressed="true">All</button><button type="button" data-v="Chips" aria-pressed="false">Chips</button><button type="button" data-v="AI infrastructure" aria-pressed="false">AI infrastructure</button><button type="button" data-v="Games" aria-pressed="false">Games</button><button type="button" data-v="Big tech & software" aria-pressed="false">Big tech &amp; software</button></div></div>
+    <div class="ctl"><label for="f-bucket">Group</label><select id="f-bucket"><option value="all">All groups</option><option value="A">Below its usual valuation</option><option value="B">Cheap on maybe-peak profits</option><option value="C">Fallen, but riskier</option><option value="D">Around its usual valuation</option><option value="E">Still richly valued</option></select></div>
+    <div class="ctl"><label for="f-sort">Sort by</label><select id="f-sort"><option value="drop">Furthest below 52-week high</option><option value="val">Cheapest vs. its usual valuation</option><option value="up">Biggest analyst upside</option><option value="name">Ticker A–Z</option></select></div>
+    <span class="count" id="f-count"></span>
+  </div>
+  <div class="list" id="list"></div>
+  <p class="src">Prices: Nov 16 closes. Forward multiples and "usual" levels mainly from StockAnalysis and TIKR, with ranges where sources disagree; analyst targets from StockAnalysis, MarketBeat and others (count shown where known). Upside is computed from the Nov 16 price. Open a row for its sources.</p>
+</section>
+
+<section>
+  <div class="part-head"><span class="eyebrow">Before acting on any of this</span><h2>Six questions for any "cheap" stock</h2></div>
+  <ol class="checklist">
+    <li><span><strong>Why is it down?</strong> One-off news (a CEO exit, a sector sell-off) can pass. A shrinking business, rising debt or lost customers usually doesn't.</span></li>
+    <li><span><strong>Are earnings estimates being cut?</strong> If yes, the low P/E is partly an illusion. Watch the next report and analyst revisions.</span></li>
+    <li><span><strong>Can it pay its bills without new money?</strong> Negative cash flow plus heavy borrowing means more dilution or costly debt, especially with yields above 5%.</span></li>
+    <li><span><strong>Is it still falling?</strong> A downtrend can run much further than looks reasonable. The <a href="momentum-lab.html">Momentum Lab</a> shows whether a stock has stabilized above its averages.</span></li>
+    <li><span><strong>What's the next test, and when?</strong> An earnings date, a launch, a court ruling. Buying just before one means accepting a big move either way.</span></li>
+    <li><span><strong>How much, and where would you be wrong?</strong> Size it with <a href="buying-basics.html#calculator">Buying basics</a> and write the exit before entering, in the <a href="momentum-lab.html#plan">exit-plan builder</a>.</span></li>
+  </ol>
+</section>
+
+<section>
+  <div class="part-head"><span class="eyebrow">Dates that can reprice these</span><h2>What to watch</h2></div>
+  <div class="panel dates">
+    <div class="date-row"><b>Nov 17</b><span><strong>Nvidia earnings</strong> after the close. Its outlook resets the whole chip and AI-infrastructure group.</span></div>
+    <div class="date-row"><b>Nov 18–19</b><span><strong>Tencent and NetEase results; GTA VI launches</strong> (Take-Two, and indirectly Roblox); <strong>Anthropic IPO</strong> trades.</span></div>
+    <div class="date-row"><b>Dec 9</b><span><strong>Fed decision.</strong> A rate hike is expected; higher rates hit expensive and debt-funded stocks hardest.</span></div>
+    <div class="date-row"><b>Mid-Dec</b><span><strong>Micron (Dec) and Oracle (Dec 14) report:</strong> the first checks on memory pricing and Oracle's cash burn.</span></div>
+    <div class="date-row"><b>Late Jan</b><span><strong>Big tech holiday-quarter results</strong>, including 2027 spending plans.</span></div>
+  </div>
+</section>
+
+<footer>
+  <p><strong>Data.</strong> Price drops and trends computed from Yahoo Finance daily prices. Valuation and analyst figures gathered from public sources on Nov 16, 2026; they differ by a few points between providers and can be stale after sharp moves.</p>
+  <p><strong>Not investment advice.</strong> This page groups stocks by public data. It doesn't recommend buying or selling any of them, and it doesn't know your situation.</p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  // sec: C chips, I AI infra, G games, T big tech. basis: pe | ps | null. fwd/usual mids feed the map.
+  var D = [
+    { t:'NVDA', n:'Nvidia', sec:'Chips', px:156.14, hi:-35.8, tr:'mixed', fwd:'11–13.5× P/E', usual:'~36×', basis:'pe', f:12.25, u:36, tl:267.65, th:309.72, an:'62', b:'A',
+      why:'Founder-CEO Jensen Huang resigned Nov 12; a new US rule (Nov 16) requires licenses for AI chips sent to Southeast Asia and Brazil. Reports Nov 17.',
+      trap:'The low multiple assumes peak data-center earnings hold. The report, the leadership gap and export rules all test that.',
+      src:[['CNBC','https://www.cnbc.com/2026/11/16/nvidia-stock-price-jensen-huang.html'],['Yahoo (5-yr P/E)','https://finance.yahoo.com/markets/stocks/articles/nvidia-just-another-micron-price-194940837.html'],['StockAnalysis','https://stockanalysis.com/stocks/nvda/forecast/']] },
+    { t:'AMD', n:'AMD', sec:'Chips', px:504.28, hi:-23.4, tr:'mixed', fwd:'31–35× P/E', usual:'~35×', basis:'pe', f:33, u:35, tl:598, th:657, an:'73', b:'D',
+      why:'Sector sell-off after the midterms and the export rule; Singapore was about 12% of revenue. Still up about 100% in a year.',
+      trap:'Not cheap against its own history; the price assumes very fast profit growth for years.',
+      src:[['Motley Fool','https://www.fool.com/investing/2026/11/16/why-amd-stock-was-sliding-today/'],['TIKR','https://www.tikr.com/blog/demand-is-higher-than-supply-amd-has-ripped-141-in-2026-is-it-too-late-to-buy']] },
+    { t:'AVGO', n:'Broadcom', sec:'Chips', px:333.40, hi:-32.6, tr:'down', fwd:'17–20× P/E', usual:'~24×', basis:'pe', f:18.5, u:24, tl:525, th:529, an:'51', b:'A',
+      why:'Redburn downgrade on Nov 13 (target cut to $398, citing AI-financing risk), plus the export rule.',
+      trap:'Custom-chip sales depend on a few big customers whose ability to fund AI spending is being questioned.',
+      src:[['TipRanks','https://www.tipranks.com/news/broadcom-stock-avgo-falls-5-thanks-to-a-downgrade-and-price-target-cut'],['StockAnalysis','https://stockanalysis.com/stocks/avgo/forecast/']] },
+    { t:'TSM', n:'TSMC', sec:'Chips', px:373.45, hi:-23.4, tr:'mixed', fwd:'16.5–18× P/E', usual:'~18×', basis:'pe', f:17.25, u:18, tl:586.69, th:586.69, an:'21', b:'D',
+      why:'Fell with the chip sell-off despite record October sales (+60% from a year earlier).',
+      trap:'Taiwan risk, and margins at a cyclical high if AI spending slows. Priced about at its average, not deeply cheap.',
+      src:[['Forbes','https://www.forbes.com/sites/jonmarkman/2026/11/10/tsmc-posts-record-october-sales-up-60-days-before-the-ai-chip-rout/'],['StockAnalysis','https://stockanalysis.com/stocks/tsm/forecast/']] },
+    { t:'MU', n:'Micron', sec:'Chips', px:719.02, hi:-42.7, tr:'mixed', fwd:'4.5–7× P/E', usual:'unreliable', basis:null, tl:1562, th:1562, an:'49', b:'B',
+      why:'Fears of a memory glut, the export rule, and a DRAM price-fixing class action allowed to proceed (Nov 14).',
+      trap:'The classic peak-earnings trap: if new supply arrives in 2027–28, profits fall and today’s low multiple rises.',
+      src:[['Motley Fool','https://www.fool.com/investing/2026/11/16/why-micron-stock-dove-today/'],['StockAnalysis','https://stockanalysis.com/stocks/mu/forecast/']] },
+    { t:'SKHY', n:'SK Hynix (US shares)', sec:'Chips', px:122.18, hi:-38.9, tr:'mixed', fwd:'3.3–3.6× P/E', usual:'n/a', basis:null, tl:247.80, th:247.80, an:'n/a', b:'B',
+      why:'Fears memory has peaked, competition from China’s CXMT, and Korean brokers cutting targets. At a new 52-week low.',
+      trap:'Same peak-cycle risk as Micron, plus possible HBM price competition from Samsung.',
+      src:[['Korea JoongAng Daily','https://koreajoongangdaily.com/business/brokerages-slash-samsung-sk-hynix-price-targets/12818938'],['MarketBeat','https://www.marketbeat.com/instant-alerts/price-sk-hynix-nasdaq-skhy-shares-down-73-time-to-sell-2026-11-16/']] },
+    { t:'ASML', n:'ASML', sec:'Chips', px:1406.79, hi:-29.7, tr:'mixed', fwd:'~23× P/E', usual:'~33–34×', basis:'pe', f:23, u:33.5, tl:2114, th:2205, an:'41', b:'A',
+      why:'Post-election chip sell-off, the export rule (−6% Nov 16), and recurring China export-control fears.',
+      trap:'China fell to 19% of sales from 36%, China is building its own tools, and orders swing with chipmakers’ spending.',
+      src:[['TIKR','https://www.tikr.com/blog/asml-sinks-8-as-post-election-chip-rout-deepens'],['StockAnalysis','https://stockanalysis.com/stocks/asml/forecast/']] },
+    { t:'ARM', n:'Arm', sec:'Chips', px:175.05, hi:-61.3, tr:'mixed', fwd:'74–107× P/E', usual:'~45–65× (weak data)', basis:'pe', f:90.5, u:55, tl:272, th:296, an:'43', b:'E',
+      why:'Guidance only modestly above estimates and royalties up just 8% in a weak phone market, plus the sector sell-off.',
+      trap:'Still one of the richest multiples in chips; a phone-royalty slowdown could last.',
+      src:[['Yahoo Finance','https://finance.yahoo.com/markets/stocks/articles/arm-shares-fall-third-quarter-113238306.html'],['GuruFocus','https://www.gurufocus.com/term/forward-pe-ratio/ARM']] },
+    { t:'MRVL', n:'Marvell', sec:'Chips', px:145.36, hi:-55.9, tr:'mixed', fwd:'28–30× P/E', usual:'~33×', basis:'pe', f:29, u:33, tl:300, th:311, an:'43', b:'C',
+      why:'Its $115B all-stock deal for Lumentum (Nov 2) cut the stock 36%, then the sector sell-off added more.',
+      trap:'Big dilution and integration risk; the deal needs China’s approval and closes in 2028. Targets may not reflect it yet.',
+      src:[['TIKR','https://www.tikr.com/blog/marvell-sinks-36-lumentum-drops-31-on-115-billion-deal-is-the-selloff-overdone'],['StockAnalysis','https://stockanalysis.com/stocks/mrvl/']] },
+    { t:'INTC', n:'Intel', sec:'Chips', px:55.47, hi:-61.0, tr:'mixed', fwd:'33–43× P/E', usual:'misleading', basis:null, tl:90.65, th:96.93, an:'49', b:'C',
+      why:'Weak holiday-quarter outlook; the CFO said 2027 free cash flow is unlikely to be positive. Down about 43% in a month.',
+      trap:'Its "usual" P/E was set on near-zero earnings, so cheap-vs-history is misleading. Factory losses continue.',
+      src:[['24/7 Wall St.','https://247wallst.com/investing/2026/11/10/intels-harsh-base-case-for-the-remainder-of-2026/'],['StockAnalysis','https://stockanalysis.com/stocks/intc/']] },
+    { t:'QCOM', n:'Qualcomm', sec:'Chips', px:168.52, hi:-35.2, tr:'mixed', fwd:'16–18× P/E', usual:'~14×', basis:'pe', f:17, u:14, tl:186, th:197, an:'n/a', b:'E',
+      why:'Revenue miss and soft guidance on Nov 4; phone-chip revenue fell 26% as the memory shortage raised phone costs.',
+      trap:'Above its usual multiple while earnings estimates keep falling and Apple’s modem business runs off.',
+      src:[['SiliconANGLE','https://siliconangle.com/2026/11/04/qualcomms-stock-falls-on-revenue-miss-and-weak-guidance-arm-and-globalfoundries-do-little-better/'],['TIKR','https://www.tikr.com/blog/qualcomm-stock-sinks-11-on-weak-guidance-is-the-selloff-a-buying-opportunity']] },
+    { t:'IREN', n:'IREN', sec:'AI infrastructure', px:16.39, hi:-76.8, tr:'down', fwd:'1.8–3.1× sales', usual:'~5.2× sales (3-yr)', basis:'ps', f:2.45, u:5.2, tl:56.69, th:58.70, an:'21', b:'C',
+      why:'Bitcoin-mining revenue fell 58%, some Microsoft revenue slipped to 2027, and there is a roughly $6B funding gap this fiscal year.',
+      trap:'Net debt jumped from $216M to $4.43B in one quarter; more dilution or costly debt is likely, and it depends heavily on Microsoft.',
+      src:[['Motley Fool','https://www.fool.com/coverage/stock-market-today/2026/11/16/stock-market-today-nov-16-iren-slides-as-neocloud-weakness-and-tech-sector-selling-put-pressure-on-shares/'],['Benzinga targets','https://www.benzinga.com/quote/IREN/price-targets']] },
+    { t:'CRWV', n:'CoreWeave', sec:'AI infrastructure', px:49.88, hi:-63.9, tr:'down', fwd:'~1.4× sales', usual:'~3.5× sales (since IPO)', basis:'ps', f:1.4, u:3.5, tl:116.66, th:116.66, an:'38', b:'C',
+      why:'Financing worries: its unsecured bonds yield around 16%, and debt is reported at roughly $47–66B against a few billion in cash. Down about 50% in 3 months.',
+      trap:'Refinancing cost, debt load, customer concentration, and close ties to Nvidia.',
+      src:[['24/7 Wall St.','https://247wallst.com/investing/2026/11/16/coreweave-shed-50-of-its-value-over-3-months-one-noted-analyst-predicts-prices-triple-several-others-close-behind/'],['Investing.com','https://www.investing.com/news/analyst-ratings/stifel-cuts-coreweave-stock-price-target-on-funding-concerns-93CH-5018730']] },
+    { t:'NBIS', n:'Nebius', sec:'AI infrastructure', px:107.13, hi:-64.3, tr:'mixed', fwd:'3.1–3.8× sales', usual:'not comparable', basis:null, tl:234.5, th:260.9, an:'12–22', b:'C',
+      why:'Guided 2026 revenue to the low end because of capacity delays, and plans $40–45B of 2027 spending on $12–13B of revenue. Down 31% in 3 days.',
+      trap:'Spending more than $3 for every $1 of revenue, with breakeven not before late 2027. Dilution risk.',
+      src:[['24/7 Wall St.','https://247wallst.com/investing/2026/11/16/nebius-plans-to-spend-more-than-3-for-every-1-of-revenue-next-year-the-stock-has-lost-31-in-three-days/'],['TipRanks','https://www.tipranks.com/stocks/nbis/forecast']] },
+    { t:'VRT', n:'Vertiv', sec:'AI infrastructure', px:188.67, hi:-50.3, tr:'down', fwd:'19–22× P/E', usual:'~27×', basis:'pe', f:20.5, u:27, tl:334, th:334, an:'31', b:'A',
+      why:'Midterm sweep and data-center backlash, plus SoftBank’s $3.7B charge, despite orders doubling and a 60% dividend raise.',
+      trap:'Orders follow Big Tech spending; if the build-out slows, today’s margins and backlog look like a peak.',
+      src:[['TIKR','https://www.tikr.com/blog/vertiv-sinks-11-in-a-week-as-midterm-sweep-hits-data-center-stocks'],['MarketBeat','https://www.marketbeat.com/stocks/NYSE/VRT/forecast/']] },
+    { t:'VST', n:'Vistra', sec:'AI infrastructure', px:130.16, hi:-31.2, tr:'down', fwd:'12.4–14.5× P/E', usual:'~15×', basis:'pe', f:13.45, u:15, tl:200, th:200, an:'n/a', b:'D',
+      why:'Democratic sweep; Texas’s governor-elect pledged a data-center moratorium; soft Texas power prices; KeyBanc downgrade.',
+      trap:'Texas policy could cap data-center deals and power prices. Partly offset: about 98% of 2027 output is already hedged.',
+      src:[['TIKR','https://www.tikr.com/blog/vistra-sinks-10-constellation-down-6-as-democrats-blue-tsunami-hits-ai-power-stocks'],['MarketBeat','https://www.marketbeat.com/stocks/NYSE/VST/forecast/']] },
+    { t:'CEG', n:'Constellation', sec:'AI infrastructure', px:277.82, hi:-27.0, tr:'mixed', fwd:'20–23× P/E', usual:'~26× (3-yr)', basis:'pe', f:21.5, u:26, tl:337.77, th:337.77, an:'25', b:'A',
+      why:'Fell 9% after the midterms, then partly recovered when Q3 beat and guidance rose.',
+      trap:'Its own CEO called data-center demand forecasts a "massive overestimation". Exposed to policy on nuclear power deals.',
+      src:[['TIKR','https://www.tikr.com/blog/constellation-ceo-sounds-the-alarm-data-center-demand-was-a-massive-overestimation-its-nuclear-contracts-run-to-the-2040s'],['StockAnalysis','https://stockanalysis.com/stocks/ceg/forecast/']] },
+    { t:'GEV', n:'GE Vernova', sec:'AI infrastructure', px:763.57, hi:-36.2, tr:'down', fwd:'32–35× P/E', usual:'~53× (since 2024)', basis:'pe', f:33.5, u:53.5, tl:1144, th:1178, an:'35–38', b:'A',
+      why:'Midterm and data-center backlash (−11.5% Nov 4) and the SoftBank charge. About 31% below its June high.',
+      trap:'Still a rich multiple if the gas-turbine cycle peaks; only about 20% of turbine backlog is tied to data centers.',
+      src:[['TIKR','https://www.tikr.com/blog/67-upside-for-ge-vernova-morgan-stanley-thinks-so-and-heres-how'],['MarketBeat','https://www.marketbeat.com/stocks/NYSE/GEV/forecast/']] },
+    { t:'TTWO', n:'Take-Two', sec:'Games', px:213.47, hi:-19.7, tr:'mixed', fwd:'~22× P/E (next 12 mo)', usual:'unclear', basis:null, tl:283.93, th:283.93, an:'29', b:'D',
+      why:'Fell 6% on Nov 16 as traders positioned before the GTA VI launch; its holiday bookings guidance came in below estimates.',
+      trap:'A one-game bet: next year’s +46% earnings forecast assumes a blockbuster.',
+      src:[['StockAnalysis','https://stockanalysis.com/stocks/ttwo/forecast/'],['GuruFocus','https://www.gurufocus.com/news/9202930/taketwo-interactive-software-inc-ttwo-shares-fall-63-what-gf-score-of-76-tells-investors']] },
+    { t:'RBLX', n:'Roblox', sec:'Games', px:46.12, hi:-55.6, tr:'down', fwd:'~4.4× sales', usual:'~7.7× sales', basis:'ps', f:4.4, u:7.7, tl:50.30, th:53, an:'30–35', b:'C',
+      why:'Age checks cut engagement: daily users −9%, hours −15%, holiday bookings guided −10% to −15%. Citi downgraded Nov 13.',
+      trap:'Losses widening; next year’s bookings estimate cut from $10.2B to $7.85B; its "usual" level is inflated by the 2021 bubble.',
+      src:[['TIKR','https://www.tikr.com/blog/is-citi-wrong-to-give-up-on-roblox-it-trades-at-4-9x-sales-below-its-5-year-average'],['StockAnalysis','https://stockanalysis.com/stocks/rblx/']] },
+    { t:'U', n:'Unity', sec:'Games', px:51.88, hi:-4.4, tr:'up', fwd:'8.3–8.8× sales', usual:'~9.1× sales', basis:'ps', f:8.55, u:9.1, tl:56.32, th:61.54, an:'22–25', b:'D',
+      why:'Not down: near its high after its first GAAP profit and reported take-private talks (Silver Lake and PIF, about $25B).',
+      trap:'Part of the price rests on a buyout that isn’t agreed.',
+      src:[['TipRanks','https://www.tipranks.com/news/unity-software-stock-u-climbs-nearly-5-on-reports-of-a-deal-to-go-private'],['StockAnalysis','https://stockanalysis.com/stocks/u/']] },
+    { t:'SONY', n:'Sony', sec:'Games', px:27.04, hi:-10.8, tr:'up', fwd:'17–20× P/E', usual:'~16×', basis:'pe', f:18.9, u:16.25, tl:31.75, th:31.75, an:'4 (US)', b:'E',
+      why:'Barely down; raised its full-year forecast on Nov 5.',
+      trap:'An aging PS5 and rising memory costs, with the multiple already above its norm.',
+      src:[['Benzinga','https://www.benzinga.com/markets/earnings/26/11/62920533/sony-stock-surges-blockbuster-spider-man-and-gaming-demand-drive-massive-q2-profit-beat'],['StockAnalysis','https://stockanalysis.com/stocks/sony/']] },
+    { t:'NTDOY', n:'Nintendo', sec:'Games', px:13.80, hi:-38.9, tr:'up', fwd:'~31× P/E (sources differ)', usual:'~23–31×', basis:null, up:'+13% (Tokyo)', an:'28', b:'D',
+      why:'Memory-driven price hikes cut Switch 2 sales (first half −37%); quarterly profit fell 29%, a miss.',
+      trap:'Memory-cost inflation plus a post-launch hardware slump; about 31× isn’t cheap.',
+      src:[['RTÉ','https://www.rte.ie/news/business/2026/1105/1598070-nintendo-quarterly-results/'],['StockAnalysis (Tokyo)','https://stockanalysis.com/quote/tyo/7974/forecast/']] },
+    { t:'MSFT', n:'Microsoft', sec:'Big tech & software', px:517.99, hi:-7.4, tr:'mixed', fwd:'~25× P/E', usual:'~29–30×', basis:'pe', f:25, u:29.5, tl:636.12, th:636.12, an:'58', b:'A',
+      why:'Only modestly down in the AI sell-off; quarterly free cash flow fell as spending rose.',
+      trap:'OpenAI’s huge Azure commitment isn’t fully funded yet, and Copilot usage looks weak.',
+      src:[['TIKR','https://www.tikr.com/blog/bad-news-for-microsoft-basically-zero-ai-use-for-most-employees-on-copilot'],['StockAnalysis','https://stockanalysis.com/stocks/msft/forecast/']] },
+    { t:'GOOGL', n:'Alphabet', sec:'Big tech & software', px:283.72, hi:-30.6, tr:'down', fwd:'~20.5× P/E', usual:'~23–25×', basis:'pe', f:20.5, u:23, tl:332, th:400.37, an:'58', b:'A',
+      why:'Its first revenue and earnings miss in about 4 years, negative free cash flow, and new share sales. Recent target cuts (UBS $332, BofA $380).',
+      trap:'AI search may eat into search-ad revenue while spending keeps cash flow negative and dilution replaces buybacks.',
+      src:[['CNBC','https://www.cnbc.com/2026/10/29/alphabet-q3-earnings-analyst-reaction.html'],['TIKR','https://www.tikr.com/blog/alphabets-p-e-ratio-current-levels-historical-trends-and-outlook']] },
+    { t:'AMZN', n:'Amazon', sec:'Big tech & software', px:257.75, hi:-10.3, tr:'up', fwd:'25–26× P/E', usual:'~48× (5-yr)', basis:'pe', f:25.5, u:48.5, tl:326.29, th:326.29, an:'62', b:'A',
+      why:'Quarterly spending about $77B, free cash flow negative over 12 months, holiday guidance below estimates.',
+      trap:'2027 spending will be "meaningfully more", keeping cash flow negative through 2027; debt about $181B.',
+      src:[['TIKR','https://www.tikr.com/blog/amazon-is-the-cheapest-its-been-in-years-its-p-e-fell-from-34-to-21'],['StockAnalysis','https://stockanalysis.com/stocks/amzn/']] },
+    { t:'META', n:'Meta', sec:'Big tech & software', px:626.41, hi:-19.7, tr:'mixed', fwd:'~19× P/E', usual:'~21–25×', basis:'pe', f:19, u:23, tl:849.55, th:849.55, an:'62', b:'A',
+      why:'Free cash flow turned negative, spending raised to $135–145B, and a large new stock sale replaced buybacks.',
+      trap:'No 2027 spending guidance yet (estimates run up to about $250B); credit-default prices at records.',
+      src:[['CNBC','https://www.cnbc.com/2026/10/22/meta-stock-q3-earnings-free-cash-flow.html'],['Yahoo Finance','https://finance.yahoo.com/markets/stocks/articles/meta-stopped-buying-back-stock-134240012.html']] },
+    { t:'AAPL', n:'Apple', sec:'Big tech & software', px:352.78, hi:-2.2, tr:'up', fwd:'~37.5× P/E', usual:'~29×', basis:'pe', f:37.75, u:29, tl:345.63, th:345.63, an:'45', b:'E',
+      why:'Not down: about 2% below its high.',
+      trap:'Memory costs squeeze margins at a peak multiple; the risk is a lower valuation rather than a broken business.',
+      src:[['TIKR','https://www.tikr.com/blog/apple-is-priced-for-its-cash-its-november-2-report-must-show-memory-costs-arent-eating-it'],['StockAnalysis','https://stockanalysis.com/stocks/aapl/']] },
+    { t:'ORCL', n:'Oracle', sec:'Big tech & software', px:119.09, hi:-52.4, tr:'down', fwd:'~14× P/E', usual:'~21× (range 12–47×)', basis:'pe', f:14, u:21, tl:236.18, th:252, an:'42', b:'C',
+      why:'AI-debt fears: −$5B free cash flow in a quarter, about $169B of debt, a BBB− rating, two $20B raises, and lost compute deals.',
+      trap:'A debt-funded build-out with cash flow negative until late 2027 and reliance on a few big AI customers. Cheap vs. its history, but riskier.',
+      src:[['TipRanks','https://www.tipranks.com/news/article/oracle-orcl-faces-a-cash-crunch-but-its-ai-bet-still-looks-promising'],['StockAnalysis','https://stockanalysis.com/stocks/orcl/']] },
+    { t:'PLTR', n:'Palantir', sec:'Big tech & software', px:160.39, hi:-24.7, tr:'mixed', fwd:'70–94× P/E', usual:'~100×', basis:'pe', f:82, u:102.5, tl:216.20, th:223.43, an:'33–39', b:'E',
+      why:'Fell after Q3 despite 96% revenue growth: contract-value growth slowed to 6% from 49%.',
+      trap:'Below its own history, but still priced for years of very fast growth while bookings slow.',
+      src:[['TIKR','https://www.tikr.com/blog/palantir-is-down-15-in-a-year-anything-short-of-a-blowout-is-a-sell'],['StockAnalysis','https://stockanalysis.com/stocks/pltr/']] },
+    { t:'TSLA', n:'Tesla', sec:'Big tech & software', px:379.74, hi:-23.9, tr:'mixed', fwd:'~178× P/E', usual:'~107×', basis:'pe', f:181.5, u:107.5, tl:412.48, th:412.48, an:'44', b:'E',
+      why:'Down 24% from its high; Q3 profit fell; the AI and rates sell-off.',
+      trap:'Earnings are shrinking while the price rests on robotaxis, robots and a SpaceX merger with no terms yet.',
+      src:[['CNBC','https://www.cnbc.com/2026/10/26/tesla-spacex-merger-barclays.html'],['StockAnalysis','https://stockanalysis.com/stocks/tsla/']] }
+  ];
+  var BK = { A: ['ok', 'Below usual'], B: ['warn', 'Peak earnings?'], C: ['bad', 'Higher risk'], D: ['mid', 'About usual'], E: ['mid', 'Still rich'] };
+  var TR = { up: ['ok', 'Uptrend'], mixed: ['warn', 'Mixed'], down: ['bad', 'Downtrend'] };
+  function upside(d) { if (d.up) return { txt: d.up, v: parseFloat(d.up) / 100 }; var lo = d.tl / d.px - 1, hi = d.th / d.px - 1; var f = function (x) { return (x >= 0 ? '+' : '−') + Math.abs(Math.round(x * 100)) + '%'; }; return { txt: Math.abs(hi - lo) < 0.02 ? f(lo) : f(lo) + ' to ' + f(hi), v: (lo + hi) / 2 }; }
+  function vsUsual(d) { return d.f && d.u ? d.f / d.u - 1 : null; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  /* -------- list -------- */
+  var state = { sector: 'all', bucket: 'all', sort: 'drop' };
+  function renderList() {
+    var rows = D.filter(function (d) { return (state.sector === 'all' || d.sec === state.sector) && (state.bucket === 'all' || d.b === state.bucket); });
+    rows.sort(function (a, b) {
+      if (state.sort === 'drop') return a.hi - b.hi;
+      if (state.sort === 'up') return upside(b).v - upside(a).v;
+      if (state.sort === 'name') return a.t < b.t ? -1 : 1;
+      var va = vsUsual(a), vb = vsUsual(b); if (va == null) return 1; if (vb == null) return -1; return va - vb;
+    });
+    $('f-count').textContent = rows.length + ' of ' + D.length + ' stocks';
+    $('list').innerHTML = rows.map(function (d) {
+      var vu = vsUsual(d), up = upside(d), bk = BK[d.b], tr = TR[d.tr];
+      var vuTxt = vu == null ? '<span class="pill mid">n/a</span>' : '<span class="' + (vu < -0.1 ? 'pos' : vu > 0.1 ? 'neg' : '') + '">' + (vu > 0 ? '+' : '−') + Math.abs(Math.round(vu * 100)) + '%</span>';
+      return '<details class="row"><summary>' +
+        '<span class="nm"><b>' + d.t + '</b><span>' + esc(d.n) + '</span></span>' +
+        '<span class="cell opt"><small>Price</small>$' + d.px.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+        '<span class="cell"><small>From high</small><span class="neg">' + d.hi.toFixed(0) + '%</span></span>' +
+        '<span class="cell opt"><small>Trend</small><span class="pill ' + tr[0] + '">' + tr[1] + '</span></span>' +
+        '<span class="cell opt"><small>Valuation · usual</small>' + esc(d.fwd) + '<br><span class="src">usual ' + esc(d.usual) + '</span></span>' +
+        '<span class="cell opt"><small>vs. usual</small>' + vuTxt + '</span>' +
+        '<span class="cell"><small>Group · analyst upside</small><span class="pill ' + bk[0] + '">' + bk[1] + '</span><br><span class="src">' + up.txt + (d.an ? ' · ' + esc(d.an) + ' analysts' : '') + '</span></span>' +
+        '<span class="chev" aria-hidden="true">▶</span>' +
+        '</summary><div class="detail">' +
+        '<div><h4>Why it fell</h4><p>' + esc(d.why) + '</p></div>' +
+        '<div><h4>What could make it a trap</h4><p>' + esc(d.trap) + '</p></div>' +
+        '<div class="full src">Sector: ' + esc(d.sec) + ' · Sources: ' + d.src.map(function (s) { return '<a href="' + s[1] + '" target="_blank" rel="noopener">' + esc(s[0]) + '</a>'; }).join(' · ') + '</div>' +
+        '</div></details>';
+    }).join('');
+  }
+  document.querySelectorAll('#f-sector button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#f-sector button').forEach(function (x) { x.setAttribute('aria-pressed', 'false'); });
+      b.setAttribute('aria-pressed', 'true'); state.sector = b.getAttribute('data-v'); renderList();
+    });
+  });
+  $('f-bucket').addEventListener('change', function () { state.bucket = this.value; renderList(); });
+  $('f-sort').addEventListener('change', function () { state.sort = this.value; renderList(); });
+  renderList();
+
+  /* -------- map -------- */
+  var SHAPE = { 'Chips': 'circle', 'AI infrastructure': 'square', 'Games': 'tri', 'Big tech & software': 'dia' };
+  var NUDGE = { MSFT: [8, -8], AMZN: [8, 4], META: [8, 12], CEG: [8, -8], AVGO: [9, 2], VRT: [8, 4], GOOGL: [8, -9], MRVL: [8, 12], VST: [8, 4], TSM: [8, -8], AMD: [-30, -6], SONY: [8, -6], PLTR: [8, 4], GEV: [8, 4], ASML: [8, 15], ORCL: [8, 4], U: [-16, -8], RBLX: [8, -6] };
+  function drawMap() {
+    var svg = $('map'), W = 900, H = 520, L = 64, R = 24, T = 20, B = 48;
+    var xmax = 80, ymin = -70, ymax = 70;
+    var x = function (v) { return L + (W - L - R) * (v / xmax); };
+    var y = function (v) { return T + (H - T - B) * (1 - (v - ymin) / (ymax - ymin)); };
+    var s = '';
+    s += '<rect class="quad" x="' + x(25) + '" y="' + y(-10) + '" width="' + (x(xmax) - x(25)) + '" height="' + (y(ymin) - y(-10)) + '"/>';
+    s += '<text class="qlab" x="' + (x(xmax) - 8) + '" y="' + (y(ymin) - 10) + '" text-anchor="end">Well off highs and cheaper than usual</text>';
+    s += '<text class="qlab" x="' + (x(0) + 8) + '" y="' + (y(ymax) + 14) + '">Near highs and pricier than usual</text>';
+    [-60, -40, -20, 20, 40, 60].forEach(function (g) { s += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '"/><text x="' + (L - 8) + '" y="' + (y(g) + 4) + '" text-anchor="end">' + (g > 0 ? '+' : '') + g + '%</text>'; });
+    [20, 40, 60, 80].forEach(function (g) { s += '<line class="grid" x1="' + x(g) + '" x2="' + x(g) + '" y1="' + T + '" y2="' + (H - B) + '"/><text x="' + x(g) + '" y="' + (H - B + 16) + '" text-anchor="middle">−' + g + '%</text>'; });
+    s += '<line class="axis" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(0) + '" y2="' + y(0) + '"/><text x="' + (L - 8) + '" y="' + (y(0) + 4) + '" text-anchor="end">usual</text>';
+    s += '<line class="axis" x1="' + L + '" x2="' + L + '" y1="' + T + '" y2="' + (H - B) + '"/><text x="' + L + '" y="' + (H - B + 16) + '" text-anchor="middle">at high</text>';
+    s += '<text x="' + ((L + W - R) / 2) + '" y="' + (H - 8) + '" text-anchor="middle">Below 52-week high →</text>';
+    s += '<text x="16" y="' + ((T + H - B) / 2) + '" text-anchor="middle" transform="rotate(-90 16 ' + ((T + H - B) / 2) + ')">Cheaper than usual ↓   ·   Pricier ↑</text>';
+    D.forEach(function (d) {
+      var vu = vsUsual(d); if (vu == null) return;
+      var px = x(Math.min(xmax, -d.hi)), py = y(Math.max(ymin, Math.min(ymax, vu * 100)));
+      var cls = 'mk' + (d.basis === 'ps' ? ' ps' : ''), sh = SHAPE[d.sec], m;
+      if (sh === 'circle') m = '<circle class="' + cls + '" cx="' + px + '" cy="' + py + '" r="6"/>';
+      else if (sh === 'square') m = '<rect class="' + cls + '" x="' + (px - 5.5) + '" y="' + (py - 5.5) + '" width="11" height="11"/>';
+      else if (sh === 'tri') m = '<path class="' + cls + '" d="M' + px + ' ' + (py - 7) + ' L' + (px + 7) + ' ' + (py + 5.5) + ' L' + (px - 7) + ' ' + (py + 5.5) + ' Z"/>';
+      else m = '<path class="' + cls + '" d="M' + px + ' ' + (py - 7) + ' L' + (px + 7) + ' ' + py + ' L' + px + ' ' + (py + 7) + ' L' + (px - 7) + ' ' + py + ' Z"/>';
+      var nd = NUDGE[d.t] || [8, 4];
+      var tip = d.t + ' · ' + d.hi.toFixed(0) + '% from high · ' + (vu > 0 ? '+' : '−') + Math.abs(Math.round(vu * 100)) + '% vs usual ' + (d.basis === 'ps' ? 'price/sales' : 'P/E');
+      s += '<g class="pt" tabindex="0" data-tip="' + esc(tip) + '">' + m + '<text class="lbl" x="' + (px + nd[0]) + '" y="' + (py + nd[1]) + '">' + d.t + '</text></g>';
+    });
+    svg.innerHTML = s;
+    var tipEl = $('map-tip'), box = document.querySelector('.map-box');
+    svg.querySelectorAll('g.pt').forEach(function (g) {
+      function show() { var r = g.getBoundingClientRect(), b = box.getBoundingClientRect(); tipEl.textContent = g.getAttribute('data-tip'); tipEl.style.left = Math.max(0, Math.min(b.width - 260, r.left - b.left - 20)) + 'px'; tipEl.style.top = (r.top - b.top - 34) + 'px'; tipEl.style.opacity = 1; }
+      function hide() { tipEl.style.opacity = 0; }
+      g.addEventListener('mouseenter', show); g.addEventListener('focus', show); g.addEventListener('mouseleave', hide); g.addEventListener('blur', hide);
+    });
+  }
+  drawMap();
+})();
+</script>

@@ -19,7 +19,10 @@ TICKERS = [
     ("MU", "Micron"), ("SKHY", "SK Hynix (US shares)"), ("000660.KS", "SK Hynix (Seoul, KRW)"),
     ("IREN", "IREN"), ("CRWV", "CoreWeave"), ("VST", "Vistra"), ("CEG", "Constellation"), ("GEV", "GE Vernova"),
     ("MSFT", "Microsoft"), ("GOOGL", "Alphabet"), ("AMZN", "Amazon"), ("META", "Meta"), ("AAPL", "Apple"),
-    ("TSLA", "Tesla"), ("RBLX", "Roblox"), ("TTWO", "Take-Two"), ("PLTR", "Palantir"),
+    ("ORCL", "Oracle"), ("ASML", "ASML"), ("ARM", "Arm"), ("MRVL", "Marvell"), ("INTC", "Intel"), ("QCOM", "Qualcomm"),
+    ("NBIS", "Nebius"), ("VRT", "Vertiv"),
+    ("TSLA", "Tesla"), ("RBLX", "Roblox"), ("TTWO", "Take-Two"), ("U", "Unity"), ("SONY", "Sony"), ("NTDOY", "Nintendo (US shares)"),
+    ("PLTR", "Palantir"),
     ("BTC-USD", "Bitcoin"), ("ETH-USD", "Ethereum"),
 ]
 
