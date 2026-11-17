@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Interactive momentum reader, rule tester, news-reaction simulator and exit-plan builder.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b47cf'/%3E%3Cpath d='M7 23V9h3.2l5.8 8.2L21.8 9H25v14h-3.2v-8.4L16 22.4l-5.8-7.8V23z' fill='white'/%3E%3C/svg%3E">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>Momentum Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: Market Notes system, widened to ~960px for charts. Four tools stacked: momentum reader (chart + signals + rule test + sizing), news-reaction simulator, real reactions table, exit-plan builder. Site cobalt for UI; semantic up/down/warn for state. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #151820;
+  --muted: #586070;
+  --line: #dde1e8;
+  --accent: #2b47cf;
+  --accent-soft: #e8ecfb;
+  --sc: #2b47cf;
+  --sc-soft: #e8ecfb;
+  --up: #17783f;
+  --down: #b83a2c;
+  --warn: #965c00;
+  --ok-bg: #e4f4ea; --warn-bg: #fbf0dc; --bad-bg: #fbe7e4;
+  --s20: #2b47cf;
+  --s50: #b0700a;
+  --s200: #9b3a8c;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+    --accent: #93a6ff; --accent-soft: #1c2340; --sc: #93a6ff; --sc-soft: #1c2340;
+    --up: #5fd98f; --down: #f58a7d; --warn: #f0b259;
+    --ok-bg: #143222; --warn-bg: #33270f; --bad-bg: #3a1c19;
+    --s20: #93a6ff; --s50: #f0b259; --s200: #e08ad2;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #171b22; --fg: #e7eaf0; --muted: #9aa3b2; --line: #2a303a;
+  --accent: #93a6ff; --accent-soft: #1c2340; --sc: #93a6ff; --sc-soft: #1c2340;
+  --up: #5fd98f; --down: #f58a7d; --warn: #f0b259;
+  --ok-bg: #143222; --warn-bg: #33270f; --bad-bg: #3a1c19;
+  --s20: #93a6ff; --s50: #f0b259; --s200: #e08ad2;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.wrap {
+  max-width: 960px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+  display: flex; flex-direction: column; gap: 56px;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 6vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.5rem, 4.2vw, 2rem); font-weight: 800; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 70ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.src { font-size: 0.82rem; color: var(--muted); }
+.src a { color: var(--muted); }
+.zh { color: var(--muted); font-weight: 500; }
+
+header.intro { display: flex; flex-direction: column; gap: 16px; }
+.tag { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sc); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sc); flex: none; }
+.lede { font-size: 1.12rem; }
+.disclaimer { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 0.93rem; max-width: none; }
+nav.parts { display: flex; flex-wrap: wrap; gap: 8px; }
+nav.parts a { text-decoration: none; color: var(--fg); font-weight: 600; font-size: 0.9rem; padding: 7px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+nav.parts a span { font-family: var(--font-mono); color: var(--sc); margin-right: 6px; }
+
+section { display: flex; flex-direction: column; gap: 18px; scroll-margin-top: 16px; }
+.part-head { display: flex; flex-direction: column; gap: 8px; padding-top: 28px; border-top: 3px solid var(--sc); }
+.part-head .eyebrow { color: var(--sc); font-weight: 600; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+.callout { border-left: 3px solid var(--sc); padding: 4px 0 4px 14px; font-size: 0.95rem; }
+
+/* controls */
+.controls { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; }
+.ctl { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ctl label { font-size: 0.82rem; font-weight: 600; }
+.ctl .hint { font-size: 0.75rem; color: var(--muted); }
+select, input[type="number"], input[type="text"], input[type="date"], textarea {
+  font: 500 0.95rem var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0;
+}
+textarea { width: 100%; resize: vertical; min-height: 64px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.ctl.grow { flex: 1 1 260px; }
+.btn { font: 600 0.85rem var(--font-body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.btn:hover { filter: brightness(0.97); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* chart */
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+.chart-box { position: relative; width: 100%; height: 380px; }
+.rsi-box { position: relative; width: 100%; height: 130px; margin-top: 6px; }
+.chart-msg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 0.92rem; text-align: center; padding: 16px; }
+.asof { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.asof-row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.85rem; flex-wrap: wrap; }
+
+/* signals */
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.sig { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sig li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
+.sig li:first-child { border-top: 0; padding-top: 0; }
+.sig .k { font-size: 0.8rem; font-weight: 600; color: var(--muted); padding-top: 3px; }
+.sig .v { font-size: 0.92rem; }
+.pill { display: inline-block; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; margin-right: 6px; vertical-align: 1px; }
+.pill.ok { color: var(--up); background: var(--ok-bg); }
+.pill.warn { color: var(--warn); background: var(--warn-bg); }
+.pill.bad { color: var(--down); background: var(--bad-bg); }
+.pill.mid { color: var(--muted); background: var(--bg); border: 1px solid var(--line); }
+.levels { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.levels td { padding: 8px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+.levels tr:first-child td { border-top: 0; }
+.levels td.p { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; text-align: right; }
+.levels .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+
+.stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.stat { background: var(--bg); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat .lab { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.stat .val { font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pos { color: var(--up); } .neg { color: var(--down); }
+
+/* simulator */
+.sim { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 18px; }
+.sim-ctl { display: flex; flex-direction: column; gap: 12px; }
+.sim-ctl .row { display: flex; justify-content: space-between; font-size: 0.82rem; }
+.sim-ctl .row b { font-family: var(--font-mono); }
+.sim-out { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.sim-svg { width: 100%; height: auto; display: block; }
+.sim-svg text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.sim-svg .zero { stroke: var(--muted); stroke-width: 1; }
+.sim-svg .imp { stroke: var(--warn); stroke-width: 1; stroke-dasharray: 4 4; }
+.sim-svg .band { fill: var(--accent-soft); }
+.sim-svg .path { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+.sim-svg .pt { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.sim-svg .grid { stroke: var(--line); stroke-width: 1; }
+.sim-big { display: flex; flex-wrap: wrap; gap: 8px; }
+.sim-big .stat { flex: 1 1 140px; }
+.explain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 0.92rem; }
+.explain li { padding-left: 16px; position: relative; }
+.explain li::before { content: ""; position: absolute; left: 2px; top: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+.concepts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.concept { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.concept .lab { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--sc); }
+.concept strong { font-family: var(--font-display); }
+.concept p { font-size: 0.88rem; color: var(--muted); }
+
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table.data { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 0.9rem; }
+table.data th, table.data td { text-align: left; padding: 9px 12px; border-top: 1px solid var(--line); }
+table.data thead th { border-top: 0; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+table.data td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+table.data th.n { text-align: right; }
+
+/* plan */
+.plan { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.plan form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.plan form .full { grid-column: 1 / -1; }
+.plan-out { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.plan-text { white-space: pre-wrap; font-size: 0.9rem; background: var(--bg); border-radius: 10px; padding: 14px; border: 1px solid var(--line); margin: 0; font-family: var(--font-body); }
+.plan-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.plan-actions .note { font-size: 0.78rem; color: var(--muted); }
+
+footer { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px; }
+footer p { max-width: 80ch; }
+
+@media (max-width: 860px) {
+  .grid2, .sim, .plan { grid-template-columns: minmax(0, 1fr); }
+  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .concepts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .wrap { padding-block: 28px 48px; gap: 44px; }
+  .chart-box { height: 300px; }
+  .rsi-box { height: 110px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .concepts { grid-template-columns: minmax(0, 1fr); }
+  .plan form { grid-template-columns: minmax(0, 1fr); }
+  .sig li { grid-template-columns: minmax(0, 1fr); }
+  .panel { padding: 14px; }
+}
+</style>
+<style>
+.site-nav { background: var(--surface); border-bottom: 1px solid var(--line); }
+.site-nav-in {
+  max-width: 800px; margin: 0 auto; box-sizing: border-box;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px;
+}
+.site-brand { font-family: "Archivo", "Helvetica Neue", Arial, sans-serif; font-weight: 800; font-size: 1rem; color: var(--fg); text-decoration: none; letter-spacing: -0.01em; }
+.site-links { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.86rem; }
+.site-links a { color: var(--muted); text-decoration: none; padding: 2px 0; }
+.site-links a:hover { color: var(--fg); text-decoration: underline; }
+.site-links a[aria-current="page"] { color: var(--fg); font-weight: 600; }
+</style>
+</head>
+<body>
+<nav class="site-nav" aria-label="Site"><div class="site-nav-in"><a class="site-brand" href="index.html">Market Notes</a><div class="site-links"><a href="overview.html">Overview</a><a href="buying-basics.html">Buying basics</a><a href="momentum-lab.html" aria-current="page">Momentum lab</a><a href="ai-chips.html">AI chips</a><a href="memory-power.html">Memory &amp; power</a><a href="games.html">Games</a><a href="big-tech.html">Big Tech</a><a href="hot-topics.html">Tesla &amp; hot topics</a></div></div></nav>
+
+
+<div class="wrap">
+
+<header class="intro">
+  <span class="tag"><span class="dot"></span>Skills · Interactive · Nov 17, 2026</span>
+  <h1>Momentum Lab</h1>
+  <p class="lede">Practice reading momentum, see where textbook rules would buy and sell, test whether those rules actually worked, and play with how a stock absorbs big news. Then write your own exit plan before the next trade.</p>
+  <p class="disclaimer"><strong>A learning tool, not trade signals.</strong> Everything here applies standard rules to past prices or runs a simplified teaching model. Rules can't see news, they fail often, and past behavior doesn't repeat on schedule. Nothing on this page tells you to buy or sell anything.</p>
+  <nav class="parts" aria-label="Parts">
+    <a href="#reader"><span>A</span>Momentum reader</a>
+    <a href="#news"><span>B</span>How stocks absorb news</a>
+    <a href="#real"><span>C</span>Real reactions</a>
+    <a href="#plan"><span>D</span>Your exit plan</a>
+  </nav>
+</header>
+
+<!-- ============ A: MOMENTUM READER ============ -->
+<section id="reader">
+  <div class="part-head"><span class="eyebrow">Part A</span><h2>Momentum reader</h2></div>
+  <p>Pick a stock. The chart shows the price with its 20-, 50- and 200-day averages, plus RSI below. Drag the date slider back in time to see what the rules said <em>before</em> a big move, without knowing what came next.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="ctl"><label for="mr-ticker">Stock</label><select id="mr-ticker"></select></div>
+      <div class="ctl"><label for="mr-rule">Rule to test</label>
+        <select id="mr-rule">
+          <option value="trend">Trend: hold while above the 50-day average</option>
+          <option value="cross">Cross: hold while 20-day avg is above 50-day</option>
+          <option value="rsi">Bounce: buy when RSI &lt; 30, sell when RSI &gt; 55</option>
+          <option value="breakout">Breakout: buy 20-day high on heavy volume, sell on 10-day low</option>
+        </select>
+      </div>
+      <label class="ctl" for="mr-markers" style="flex-direction:row;align-items:center;gap:8px;font-size:0.85rem;font-weight:600"><input id="mr-markers" type="checkbox" checked style="width:18px;height:18px;accent-color:var(--accent)"> Show rule's buys and sells</label>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="legend" aria-hidden="true">
+      <span><i style="background:var(--up)"></i>Up day</span>
+      <span><i style="background:var(--down)"></i>Down day</span>
+      <span><i style="background:var(--s20)"></i>20-day avg</span>
+      <span><i style="background:var(--s50)"></i>50-day avg</span>
+      <span><i style="background:var(--s200)"></i>200-day avg</span>
+      <span><i style="background:var(--muted)"></i>Volume</span>
+      <span><b style="color:var(--up)">▲</b>Rule buy</span>
+      <span><b style="color:var(--down)">▼</b>Rule sell</span>
+    </div>
+    <div class="chart-box" id="mr-chart" role="img" aria-label="Price chart with moving averages and volume"><div class="chart-msg" id="mr-msg">Loading price history…</div></div>
+    <div class="rsi-box" id="mr-rsi" role="img" aria-label="RSI chart with 30 and 70 lines"></div>
+    <div class="asof">
+      <div class="asof-row"><label for="mr-asof"><strong>As of</strong> <span id="mr-asof-label" class="mono">—</span></label><span class="src" id="mr-updated"></span></div>
+      <input id="mr-asof" type="range" min="0" max="0" value="0" aria-describedby="mr-asof-label">
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3 style="margin-bottom:10px">What the momentum readings say</h3>
+      <ul class="sig" id="mr-signals"><li><span class="k">Waiting</span><span class="v">Readings appear once prices load.</span></li></ul>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:4px">Where textbook rules would act</h3>
+      <p class="src" style="margin-bottom:10px">Common reference levels, drawn on the chart. Not price targets.</p>
+      <table class="levels" id="mr-levels"><tr><td>Levels appear once prices load.</td></tr></table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3 style="margin-bottom:4px">Did the rule actually work? <span class="src" style="font-weight:400" id="bt-window"></span></h3>
+    <p class="src" style="margin-bottom:12px">Simplified test: trades at the closing price on the day the rule flips, no fees or taxes. Compare with just holding.</p>
+    <div class="stats">
+      <div class="stat"><span class="lab">Rule return</span><span class="val" id="bt-ret">—</span></div>
+      <div class="stat"><span class="lab">Just holding</span><span class="val" id="bt-bh">—</span></div>
+      <div class="stat"><span class="lab">Trades</span><span class="val" id="bt-n">—</span></div>
+      <div class="stat"><span class="lab">Winning trades</span><span class="val" id="bt-win">—</span></div>
+      <div class="stat"><span class="lab">Worst drop</span><span class="val" id="bt-dd">—</span></div>
+      <div class="stat"><span class="lab">Time invested</span><span class="val" id="bt-in">—</span></div>
+    </div>
+    <p class="callout" style="margin-top:12px" id="bt-note">Try each rule on a few stocks. Notice how often a rule that looked smart on one chart loses on another, or trades so often that small losses add up. That's called whipsaw.</p>
+  </div>
+
+  <div class="panel">
+    <h3 style="margin-bottom:4px">Position size from the chart <span class="zh">仓位</span></h3>
+    <p class="src" style="margin-bottom:12px">Uses the latest price on the slider date and a stop based on how much the stock normally moves.</p>
+    <div class="controls">
+      <div class="ctl"><label for="ps-account">Account size ($)</label><input id="ps-account" type="number" inputmode="decimal" min="0" step="any" value="10000"></div>
+      <div class="ctl"><label for="ps-risk">Max loss on this idea (%)</label><input id="ps-risk" type="number" inputmode="decimal" min="0" step="any" value="1"></div>
+      <div class="ctl"><label for="ps-stop">Stop method <span class="zh">止损</span></label>
+        <select id="ps-stop"><option value="atr2">2× normal daily range (ATR) below price</option><option value="atr3">3× ATR below price (looser)</option><option value="s50">Just below the 50-day average</option></select></div>
+    </div>
+    <p style="margin-top:12px" id="ps-out" class="mono">—</p>
+  </div>
+</section>
+
+<!-- ============ B: NEWS SIMULATOR ============ -->
+<section id="news">
+  <div class="part-head"><span class="eyebrow">Part B</span><h2>How much news can a stock absorb?</h2></div>
+  <p>Prices move on the <em>gap between what happened and what was already expected</em>. A great report can still drop a stock if everyone expected greatness. Use the simulator to feel how expectations, guidance, the run-up and company size shape the reaction.</p>
+
+  <div class="concepts">
+    <div class="concept"><span class="lab">1 · Surprise</span><strong>Expectations, not news</strong><p>A beat that matches the unofficial "whisper" is no surprise at all. Only the part nobody expected moves the price.</p></div>
+    <div class="concept"><span class="lab">2 · Implied move</span><strong>The options market's guess</strong><p>Option prices imply how big a move traders are paying for. Nvidia's is about ±9% tonight. It's a size, not a direction.</p></div>
+    <div class="concept"><span class="lab">3 · Guidance</span><strong>The future beats the past</strong><p>Next quarter's forecast usually moves a stock more than the quarter just reported.</p></div>
+    <div class="concept"><span class="lab">4 · Run-up</span><strong>Crowded trades</strong><p>If a stock rose a lot into the news, many holders are waiting to sell on it. That's "buy the rumor, sell the news."</p></div>
+    <div class="concept"><span class="lab">5 · Size</span><strong>Big stocks absorb, small ones swing</strong><p>Giant companies have so many buyers and sellers that news moves them less. Small stocks and 2× funds overshoot both ways.</p></div>
+    <div class="concept"><span class="lab">6 · Follow-through</span><strong>The first move isn't final</strong><p>A move backed by better guidance and heavy volume often keeps drifting. A move on hype tends to fade within days.</p></div>
+  </div>
+
+  <div class="panel sim">
+    <div class="sim-ctl">
+      <div class="chips" role="group" aria-label="Preset scenarios">
+        <button type="button" class="btn" data-preset="sellnews">Sell the news</button>
+        <button type="button" class="btn" data-preset="lowbar">Low bar, big beat</button>
+        <button type="button" class="btn" data-preset="guideup">Miss, but guides up</button>
+        <button type="button" class="btn" data-preset="hype">Small-cap hype</button>
+      </div>
+      <div class="ctl"><div class="row"><label for="sim-implied">Options-implied move</label><b id="sim-implied-v">±9%</b></div><input id="sim-implied" type="range" min="2" max="20" step="0.5" value="9"></div>
+      <div class="ctl"><label for="sim-results">Results vs. what was priced in</label>
+        <select id="sim-results"><option value="-2">Big miss</option><option value="-1">Miss</option><option value="0" selected>In line with the whisper</option><option value="1">Beat</option><option value="2">Big beat</option></select></div>
+      <div class="ctl"><label for="sim-guide">Next-quarter guidance vs. hopes</label>
+        <select id="sim-guide"><option value="-2">Cut sharply</option><option value="-1">Below hopes</option><option value="0" selected>In line</option><option value="1">Above hopes</option><option value="2">Raised sharply</option></select></div>
+      <div class="ctl"><div class="row"><label for="sim-runup">Move in the month before</label><b id="sim-runup-v">+10%</b></div><input id="sim-runup" type="range" min="-20" max="40" step="1" value="10"></div>
+      <div class="ctl"><label for="sim-size">Company size and trading volume</label>
+        <select id="sim-size"><option value="mega">Mega cap (Nvidia, Apple)</option><option value="large" selected>Large cap</option><option value="mid">Mid cap</option><option value="small">Small cap or 2× fund</option></select></div>
+      <div class="ctl"><label for="sim-mood">Market mood that week</label>
+        <select id="sim-mood"><option value="-1">Risk-off (selling everywhere)</option><option value="0" selected>Neutral</option><option value="1">Risk-on (buying everywhere)</option></select></div>
+    </div>
+    <div class="sim-out">
+      <div class="sim-big">
+        <div class="stat"><span class="lab">Model's day-1 move</span><span class="val" id="sim-d1">—</span></div>
+        <div class="stat"><span class="lab">Typical range</span><span class="val" id="sim-range">—</span></div>
+        <div class="stat"><span class="lab">After 10 days</span><span class="val" id="sim-d10">—</span></div>
+      </div>
+      <svg class="sim-svg" id="sim-svg" viewBox="0 0 600 260" role="img" aria-label="Simulated price path over ten trading days after the news"></svg>
+      <ul class="explain" id="sim-explain"></ul>
+      <p class="src">A teaching model with made-up weights, built to show direction and proportion. It is not a forecast for any stock.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ C: REAL REACTIONS ============ -->
+<section id="real">
+  <div class="part-head"><span class="eyebrow">Part C</span><h2>Real reactions: Nvidia's last 8 reports</h2></div>
+  <p>The model is tidy; reality isn't. Here's how Nvidia and SK Hynix (Seoul shares) actually moved after each report. SK Hynix is often treated as an "Nvidia follower," but it moved the same direction as Nvidia only 3 times out of 8.</p>
+  <div class="tbl"><table class="data">
+    <thead><tr><th>Nvidia report</th><th class="n">Nvidia next day</th><th class="n">SK Hynix next Seoul day</th><th class="n">SK Hynix after 3 days</th></tr></thead>
+    <tbody>
+      <tr><td>Nov 20, 2024</td><td class="n pos">+0.5%</td><td class="n neg">−1.1%</td><td class="n pos">+3.8%</td></tr>
+      <tr><td>Feb 26, 2025</td><td class="n neg">−8.5%</td><td class="n neg">−1.9%</td><td class="n neg">−8.3%</td></tr>
+      <tr><td>May 28, 2025</td><td class="n pos">+3.2%</td><td class="n pos">+1.9%</td><td class="n neg">−0.2%</td></tr>
+      <tr><td>Aug 27, 2025</td><td class="n neg">−0.8%</td><td class="n pos">+3.3%</td><td class="n neg">−1.5%</td></tr>
+      <tr><td>Nov 19, 2025</td><td class="n neg">−3.2%</td><td class="n pos">+1.6%</td><td class="n neg">−7.5%</td></tr>
+      <tr><td>Feb 25, 2026</td><td class="n neg">−5.5%</td><td class="n pos">+8.0%</td><td class="n neg">−7.8%</td></tr>
+      <tr><td>May 20, 2026*</td><td class="n neg">−1.8%</td><td class="n pos">+11.2%</td><td class="n pos">+17.6%</td></tr>
+      <tr><td>Aug 26, 2026</td><td class="n pos">+8.7%</td><td class="n pos">+2.5%</td><td class="n neg">−0.8%</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">Computed from daily closing prices (Yahoo Finance). Nvidia reports after the US close, so SK Hynix's "next Seoul day" is the Korean session that opens a few hours later. *May date approximate. Nvidia's average next-day move was about 4%, even though the options market typically prices more.</p>
+  <p class="callout"><strong>Three lessons from the table.</strong> The first-day direction often reversed within 3 days. Followers don't reliably follow. And the biggest SK Hynix gains came after Nvidia <em>fell</em>, when investors focused on memory demand instead of Nvidia's own numbers.</p>
+</section>
+
+<!-- ============ D: EXIT PLAN ============ -->
+<section id="plan">
+  <div class="part-head"><span class="eyebrow">Part D</span><h2>Your exit plan, written before the trade</h2></div>
+  <p>Most selling mistakes happen because the decision is made in the moment, with the price moving. Fill this in while you're calm. It's saved only in this browser on this device.</p>
+  <div class="panel plan">
+    <form id="plan-form" novalidate>
+      <div class="ctl"><label for="pl-ticker">Stock</label><input id="pl-ticker" type="text" value="EXAMPLE" autocomplete="off"></div>
+      <div class="ctl"><label for="pl-shares">Shares <span class="zh">仓位</span></label><input id="pl-shares" type="number" inputmode="decimal" min="0" step="any" value="20"></div>
+      <div class="ctl"><label for="pl-cost">Average cost ($)</label><input id="pl-cost" type="number" inputmode="decimal" min="0" step="any" value="50"></div>
+      <div class="ctl"><label for="pl-price">Price now ($)</label><input id="pl-price" type="number" inputmode="decimal" min="0" step="any" value="48"></div>
+      <div class="ctl"><label for="pl-target">Take-profit price <span class="zh">止盈</span></label><input id="pl-target" type="number" inputmode="decimal" min="0" step="any" value="56"></div>
+      <div class="ctl"><label for="pl-stop">Get-out price <span class="zh">止损</span></label><input id="pl-stop" type="number" inputmode="decimal" min="0" step="any" value="44"></div>
+      <div class="ctl"><label for="pl-time">Time limit</label><input id="pl-time" type="date" value="2026-11-20"></div>
+      <div class="ctl"><label for="pl-account">Account size ($, optional)</label><input id="pl-account" type="number" inputmode="decimal" min="0" step="any" value=""></div>
+      <div class="ctl full"><label for="pl-why">Why I own it, in one sentence</label><textarea id="pl-why">Example: I expect the company's earnings report to beat expectations.</textarea></div>
+      <div class="ctl full"><label for="pl-event">Big event before the time limit</label><input id="pl-event" type="text" value="Earnings report on Nov 17 after the close"></div>
+      <div class="ctl"><label for="pl-gapup">If it opens far above my take-profit</label>
+        <select id="pl-gapup"><option>Sell all with a limit order near the open</option><option>Sell half, move the get-out price up to my cost</option><option>Hold, but raise the get-out price</option></select></div>
+      <div class="ctl"><label for="pl-gapdown">If it opens below my get-out price</label>
+        <select id="pl-gapdown"><option>Sell all with a limit order near the open, no second-guessing</option><option>Sell half now, the rest if it doesn't recover by day's end</option><option>Hold only if my one-sentence reason is still true</option></select></div>
+    </form>
+    <div class="plan-out">
+      <div class="sim-big">
+        <div class="stat"><span class="lab">Risk to get-out</span><span class="val" id="pl-risk">—</span></div>
+        <div class="stat"><span class="lab">Reward to target</span><span class="val" id="pl-reward">—</span></div>
+        <div class="stat"><span class="lab">Reward ÷ risk</span><span class="val" id="pl-rr">—</span></div>
+      </div>
+      <pre class="plan-text" id="pl-text"></pre>
+      <div class="plan-actions"><button type="button" class="btn" id="pl-copy">Copy plan</button><button type="button" class="btn" id="pl-reset">Reset to example</button><span class="note" id="pl-note">Saved in this browser only.</span></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p><strong>Data.</strong> Daily prices from Yahoo Finance's public chart data, refreshed when the site updates; the latest bar may be a day still in progress. SK Hynix's US shares only started trading in July 2026, so long averages aren't available for them yet.</p>
+  <p><strong>Not investment advice.</strong> The rules, levels and simulator are standard teaching tools applied mechanically. They don't know your situation, can't see news, and are often wrong. Nothing here tells you to buy or sell anything.</p>
+</footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var css = function (n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); };
+  function rgba(hex, a) {
+    var h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(function (x) { return x + x; }).join('');
+    var n = parseInt(h, 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  function pct(x, d) { if (!isFinite(x)) return '—'; var s = (x * 100).toFixed(d == null ? 1 : d); return (x > 0 ? '+' : x < 0 ? '−' : '') + s.replace('-', '') + '%'; }
+  function money(x, cur) {
+    if (!isFinite(x)) return '—';
+    var sym = cur === 'KRW' ? '₩' : '$';
+    var digits = cur === 'KRW' ? 0 : (Math.abs(x) >= 1000 ? 0 : 2);
+    return sym + x.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  }
+
+  /* ---------------- indicators ---------------- */
+  function sma(a, n) { var o = new Array(a.length).fill(null), s = 0; for (var i = 0; i < a.length; i++) { s += a[i]; if (i >= n) s -= a[i - n]; if (i >= n - 1) o[i] = s / n; } return o; }
+  function ema(a, n) { var o = new Array(a.length).fill(null), k = 2 / (n + 1), e = null; for (var i = 0; i < a.length; i++) { if (a[i] == null) continue; e = e == null ? a[i] : a[i] * k + e * (1 - k); o[i] = e; } return o; }
+  function rsi(c, n) {
+    var o = new Array(c.length).fill(null), g = 0, l = 0;
+    for (var i = 1; i < c.length; i++) {
+      var ch = c[i] - c[i - 1], up = Math.max(ch, 0), dn = Math.max(-ch, 0);
+      if (i <= n) { g += up; l += dn; if (i === n) { g /= n; l /= n; o[i] = l === 0 ? 100 : 100 - 100 / (1 + g / l); } }
+      else { g = (g * (n - 1) + up) / n; l = (l * (n - 1) + dn) / n; o[i] = l === 0 ? 100 : 100 - 100 / (1 + g / l); }
+    }
+    return o;
+  }
+  function atr(h, l, c, n) {
+    var o = new Array(c.length).fill(null), a = 0;
+    for (var i = 0; i < c.length; i++) {
+      var tr = i === 0 ? h[i] - l[i] : Math.max(h[i] - l[i], Math.abs(h[i] - c[i - 1]), Math.abs(l[i] - c[i - 1]));
+      if (i < n) { a += tr; if (i === n - 1) { a /= n; o[i] = a; } } else { a = (a * (n - 1) + tr) / n; o[i] = a; }
+    }
+    return o;
+  }
+  function prevExt(a, n, isMax) { var o = new Array(a.length).fill(null); for (var i = n; i < a.length; i++) { var m = isMax ? -Infinity : Infinity; for (var j = i - n; j < i; j++) m = isMax ? Math.max(m, a[j]) : Math.min(m, a[j]); o[i] = m; } return o; }
+  function rollExt(a, n, isMax) { var o = new Array(a.length).fill(null); for (var i = 0; i < a.length; i++) { var m = isMax ? -Infinity : Infinity; for (var j = Math.max(0, i - n + 1); j <= i; j++) m = isMax ? Math.max(m, a[j]) : Math.min(m, a[j]); o[i] = m; } return o; }
+
+  /* ---------------- state ---------------- */
+  var DB = null, T = null, I = null, sym = null, W = 252;
+  var chart, candles, l20, l50, l200, vol, rchart, rline, priceLines = [], syncing = false;
+
+  function computeAll(t) {
+    var c = t.c, h = t.h, l = t.l, v = t.v;
+    var e12 = ema(c, 12), e26 = ema(c, 26), macd = c.map(function (_, i) { return e12[i] != null && e26[i] != null ? e12[i] - e26[i] : null; });
+    var sig = ema(macd.map(function (x) { return x; }), 9);
+    var win = sym.indexOf('-USD') > 0 ? 365 : 252;
+    return {
+      s20: sma(c, 20), s50: sma(c, 50), s200: sma(c, 200), rsi: rsi(c, 14), atr: atr(h, l, c, 14),
+      macd: macd, sig: sig, hist: macd.map(function (x, i) { return x != null && sig[i] != null ? x - sig[i] : null; }),
+      v20: sma(v, 20), hi20: prevExt(h, 20, true), lo10: prevExt(l, 10, false), hiW: rollExt(h, win, true), loW: rollExt(l, win, false), win: win
+    };
+  }
+
+  /* ---------------- chart ---------------- */
+  function chartOpts() {
+    return {
+      autoSize: true,
+      layout: { background: { type: 'solid', color: css('--surface') }, textColor: css('--muted'), fontFamily: 'IBM Plex Mono, ui-monospace, monospace', fontSize: 11 },
+      grid: { vertLines: { color: rgba(css('--line'), 0.6) }, horzLines: { color: rgba(css('--line'), 0.6) } },
+      rightPriceScale: { borderColor: css('--line') },
+      timeScale: { borderColor: css('--line'), rightOffset: 4 },
+      crosshair: { mode: 0 }
+    };
+  }
+  function buildCharts() {
+    var LW = window.LightweightCharts;
+    if (!LW) { $('mr-msg').textContent = 'The chart library didn’t load. Check your connection and reload the page.'; return false; }
+    $('mr-msg').remove();
+    chart = LW.createChart($('mr-chart'), chartOpts());
+    candles = chart.addCandlestickSeries({ upColor: css('--up'), downColor: css('--down'), wickUpColor: css('--up'), wickDownColor: css('--down'), borderVisible: false });
+    candles.priceScale().applyOptions({ scaleMargins: { top: 0.06, bottom: 0.24 } });
+    var lineOpt = function (col) { return { color: col, lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }; };
+    l20 = chart.addLineSeries(lineOpt(css('--s20')));
+    l50 = chart.addLineSeries(lineOpt(css('--s50')));
+    l200 = chart.addLineSeries(lineOpt(css('--s200')));
+    vol = chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false });
+    chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+    rchart = LW.createChart($('mr-rsi'), Object.assign(chartOpts(), { timeScale: { visible: false, borderColor: css('--line') } }));
+    rline = rchart.addLineSeries({ color: css('--accent'), lineWidth: 2, priceLineVisible: false, lastValueVisible: true });
+    rline.createPriceLine({ price: 70, color: css('--down'), lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: '70' });
+    rline.createPriceLine({ price: 30, color: css('--up'), lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: '30' });
+    chart.timeScale().subscribeVisibleLogicalRangeChange(function (r) { if (syncing || !r) return; syncing = true; rchart.timeScale().setVisibleLogicalRange(r); syncing = false; });
+    rchart.timeScale().subscribeVisibleLogicalRangeChange(function (r) { if (syncing || !r) return; syncing = true; chart.timeScale().setVisibleLogicalRange(r); syncing = false; });
+    return true;
+  }
+  function retheme() {
+    if (!chart) return;
+    chart.applyOptions(chartOpts()); rchart.applyOptions(Object.assign(chartOpts(), { timeScale: { visible: false, borderColor: css('--line') } }));
+    candles.applyOptions({ upColor: css('--up'), downColor: css('--down'), wickUpColor: css('--up'), wickDownColor: css('--down') });
+    l20.applyOptions({ color: css('--s20') }); l50.applyOptions({ color: css('--s50') }); l200.applyOptions({ color: css('--s200') });
+    rline.applyOptions({ color: css('--accent') });
+    render();
+  }
+
+  /* ---------------- render reader ---------------- */
+  function windowStart(asOf) { return Math.max(0, asOf - I.win + 1); }
+
+  function render() {
+    if (!T || !chart) return;
+    var asOf = +$('mr-asof').value, a = windowStart(asOf), d = T.d;
+    $('mr-asof-label').textContent = d[asOf];
+    var cs = [], v20 = [], v50 = [], v200 = [], vs = [], rs = [];
+    var upC = rgba(css('--up'), 0.35), dnC = rgba(css('--down'), 0.35);
+    for (var i = a; i <= asOf; i++) {
+      cs.push({ time: d[i], open: T.o[i], high: T.h[i], low: T.l[i], close: T.c[i] });
+      if (I.s20[i] != null) v20.push({ time: d[i], value: I.s20[i] });
+      if (I.s50[i] != null) v50.push({ time: d[i], value: I.s50[i] });
+      if (I.s200[i] != null) v200.push({ time: d[i], value: I.s200[i] });
+      vs.push({ time: d[i], value: T.v[i], color: T.c[i] >= T.o[i] ? upC : dnC });
+      rs.push(I.rsi[i] != null ? { time: d[i], value: I.rsi[i] } : { time: d[i] });
+    }
+    candles.setData(cs); l20.setData(v20); l50.setData(v50); l200.setData(v200); vol.setData(vs); rline.setData(rs);
+    renderSignals(asOf); renderLevels(asOf); renderBacktest(a, asOf); renderSizing(asOf);
+    chart.timeScale().fitContent();
+  }
+
+  function pill(cls, txt) { return '<span class="pill ' + cls + '">' + txt + '</span>'; }
+
+  function renderSignals(i) {
+    var c = T.c[i], s20 = I.s20[i], s50 = I.s50[i], s200 = I.s200[i], r = I.rsi[i], hst = I.hist[i], cur = T.currency;
+    var out = [];
+    var trend;
+    if (s50 == null) trend = pill('mid', 'Too new') + 'Not enough history for a 50-day average yet.';
+    else if (s200 != null && c > s50 && s50 > s200) trend = pill('ok', 'Uptrend') + 'Price is above the 50-day average, which is above the 200-day. Trend-followers stay with stocks like this.';
+    else if (s200 != null && c < s50 && s50 < s200) trend = pill('bad', 'Downtrend') + 'Price is below the 50-day, which is below the 200-day. Trend-followers avoid buying these.';
+    else if (s200 == null) trend = (c > s50 ? pill('ok', 'Above 50-day') : pill('bad', 'Below 50-day')) + 'No 200-day average yet; judge the trend by the 50-day only.';
+    else trend = pill('warn', 'Mixed') + 'The averages disagree. Trends are often changing direction here.';
+    out.push(['Trend', trend]);
+
+    var mom;
+    if (r == null) mom = pill('mid', '—') + 'Not enough data.';
+    else if (r >= 70) mom = pill('warn', 'RSI ' + r.toFixed(0)) + 'Strong and stretched. Momentum is high, but chasing here means buying after a big run.';
+    else if (r >= 50) mom = pill('ok', 'RSI ' + r.toFixed(0)) + 'Buyers have the upper hand recently.';
+    else if (r > 30) mom = pill('warn', 'RSI ' + r.toFixed(0)) + 'Sellers have the upper hand recently.';
+    else mom = pill('bad', 'RSI ' + r.toFixed(0)) + 'Washed out. Bounces happen from here, but so do further falls.';
+    out.push(['Momentum', mom]);
+
+    var mc = '—';
+    if (hst != null) {
+      var k = i, days = 0; while (k > 0 && I.hist[k - 1] != null && (I.hist[k - 1] > 0) === (hst > 0)) { k--; days++; }
+      mc = (hst > 0 ? pill('ok', 'MACD up') : pill('bad', 'MACD down')) + 'Short-term momentum has been ' + (hst > 0 ? 'rising' : 'falling') + ' for ' + (days + 1) + ' trading day' + (days ? 's' : '') + '.';
+    }
+    out.push(['MACD', mc]);
+
+    var r63 = i >= 63 ? c / T.c[i - 63] - 1 : NaN;
+    out.push(['3 months', isFinite(r63) ? (r63 >= 0 ? pill('ok', pct(r63, 0)) : pill('bad', pct(r63, 0))) + 'Change over the last 3 months.' : pill('mid', '—') + 'Not enough history.']);
+
+    var vr = I.v20[i] ? Math.round(T.v[i] / I.v20[i] * 10) / 10 : NaN;
+    out.push(['Volume', isFinite(vr) ? (vr >= 1.5 ? pill('warn', vr.toFixed(1) + '× avg') + 'Heavy trading. Big moves on heavy volume tend to carry more conviction.' : pill('mid', vr.toFixed(1) + '× avg') + 'Normal trading activity.') : '—']);
+
+    var fromHi = c / I.hiW[i] - 1, fromLo = c / I.loW[i] - 1;
+    out.push(['52-week range', pill(fromHi > -0.05 ? 'ok' : fromHi < -0.4 ? 'bad' : 'mid', pct(fromHi, 0) + ' from high') + pct(fromLo, 0) + ' above the low. Momentum traders favor stocks near highs; bargain hunters look near lows.']);
+
+    var at = I.atr[i];
+    out.push(['Daily swing', at ? pill('mid', money(at, cur) + ' · ' + (at / c * 100).toFixed(1) + '%') + 'A normal day’s range (ATR). A 1-ATR move is ordinary noise, not news.' : '—']);
+
+    $('mr-signals').innerHTML = out.map(function (x) { return '<li><span class="k">' + x[0] + '</span><span class="v">' + x[1] + '</span></li>'; }).join('');
+  }
+
+  function renderLevels(i) {
+    priceLines.forEach(function (pl) { candles.removePriceLine(pl); }); priceLines = [];
+    var c = T.c[i], at = I.atr[i], cur = T.currency, rows = [];
+    function add(price, color, title, text) {
+      if (price == null || !isFinite(price)) return;
+      priceLines.push(candles.createPriceLine({ price: price, color: color, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: title }));
+      rows.push('<tr><td><span class="sw" style="background:' + color + '"></span><strong>' + title + '</strong><br><span class="src">' + text + '</span></td><td class="p">' + money(price, cur) + '</td></tr>');
+    }
+    add(I.hi20[i], css('--up'), 'Breakout level', 'The highest price of the last 20 days. Breakout traders buy a close above it, ideally on heavy volume.');
+    add(I.s20[i], css('--s20'), 'Pullback area', 'The 20-day average. In an uptrend, trend-followers buy dips toward it instead of chasing.');
+    add(I.s50[i], css('--s50'), 'Trend line', 'The 50-day average. A close below it is a common "the trend is breaking" exit.');
+    if (at) add(c - 2 * at, css('--down'), 'Volatility stop', 'Today’s price minus 2 normal daily ranges. Far enough not to trip on noise; a common stop for swing trades.');
+    $('mr-levels').innerHTML = rows.join('') || '<tr><td>Not enough history for these levels yet.</td></tr>';
+  }
+
+  function decide(rule, i, inPos) {
+    var c = T.c[i];
+    if (rule === 'trend') return I.s50[i] != null && c > I.s50[i];
+    if (rule === 'cross') return I.s20[i] != null && I.s50[i] != null && I.s20[i] > I.s50[i];
+    if (rule === 'rsi') { if (I.rsi[i] == null) return inPos; return inPos ? !(I.rsi[i] > 55) : I.rsi[i] < 30; }
+    if (rule === 'breakout') {
+      if (!inPos) return I.hi20[i] != null && I.v20[i] && c > I.hi20[i] && T.v[i] > 1.5 * I.v20[i];
+      return !(I.lo10[i] != null && c < I.lo10[i]);
+    }
+    return false;
+  }
+
+  function renderBacktest(a, b) {
+    var rule = $('mr-rule').value, inPos = false, entry = 0, eq = 1, peak = 1, dd = 0, daysIn = 0, trades = [], marks = [];
+    var upC = css('--up'), dnC = css('--down');
+    for (var i = a; i <= b; i++) {
+      if (inPos && i > a) { eq *= T.c[i] / T.c[i - 1]; daysIn++; }
+      peak = Math.max(peak, eq); dd = Math.min(dd, eq / peak - 1);
+      var want = decide(rule, i, inPos);
+      if (!inPos && want && i < b) { inPos = true; entry = T.c[i]; marks.push({ time: T.d[i], position: 'belowBar', color: upC, shape: 'arrowUp', text: '' }); }
+      else if (inPos && !want) { inPos = false; trades.push(T.c[i] / entry - 1); marks.push({ time: T.d[i], position: 'aboveBar', color: dnC, shape: 'arrowDown', text: '' }); }
+    }
+    if (inPos) trades.push(T.c[b] / entry - 1);
+    var bh = T.c[b] / T.c[a] - 1, ret = eq - 1, wins = trades.filter(function (x) { return x > 0; }).length;
+    candles.setMarkers($('mr-markers').checked ? marks : []);
+    function setv(id, txt, cls) { var el = $(id); el.textContent = txt; el.className = 'val' + (cls ? ' ' + cls : ''); }
+    setv('bt-ret', pct(ret, 0), ret >= 0 ? 'pos' : 'neg');
+    setv('bt-bh', pct(bh, 0), bh >= 0 ? 'pos' : 'neg');
+    setv('bt-n', String(trades.length) + (inPos ? ' (1 open)' : ''));
+    setv('bt-win', trades.length ? Math.round(wins / trades.length * 100) + '%' : '—');
+    setv('bt-dd', pct(dd, 0), 'neg');
+    setv('bt-in', b > a ? Math.round(daysIn / (b - a) * 100) + '%' : '—');
+    $('bt-window').textContent = '· ' + T.d[a] + ' to ' + T.d[b];
+    var note;
+    if (!trades.length) note = 'The rule never triggered in this window. Some rules wait a long time for their setup, and that patience is part of the rule.';
+    else if (ret > bh + 0.05) note = 'Here the rule beat just holding, mostly by sitting out part of a decline. Try other stocks before trusting it: rules that win on one chart often lose on the next.';
+    else if (ret < bh - 0.05) note = 'Here just holding beat the rule. Rules give up gains by selling on dips that recover. That trade-off is the price of avoiding some big drops.';
+    else note = 'The rule and simply holding ended up close. The rule’s real difference is in the ride: compare the worst drop and how much of the time your money was at risk.';
+    $('bt-note').textContent = note;
+  }
+
+  function renderSizing(i) {
+    var acct = parseFloat($('ps-account').value), riskPct = parseFloat($('ps-risk').value), m = $('ps-stop').value;
+    var c = T.c[i], at = I.atr[i], cur = T.currency, stop;
+    if (m === 'atr2') stop = at ? c - 2 * at : NaN; else if (m === 'atr3') stop = at ? c - 3 * at : NaN; else stop = I.s50[i] != null ? I.s50[i] * 0.995 : NaN;
+    var el = $('ps-out');
+    if (!(acct > 0 && riskPct > 0)) { el.textContent = 'Enter an account size and a max loss above zero.'; return; }
+    if (!isFinite(stop)) { el.textContent = 'Not enough history for this stop method.'; return; }
+    if (stop >= c) { el.textContent = 'Price is already below the 50-day average, so this stop method doesn’t apply. Try an ATR stop.'; return; }
+    if (cur !== 'USD') { el.textContent = 'This stock is priced in ' + cur + '; switch to a US-dollar stock to size in dollars.'; return; }
+    var risk = acct * riskPct / 100, per = c - stop, sh = Math.floor(risk / per), cost = sh * c;
+    if (sh * c > acct) { sh = Math.floor(acct / c); cost = sh * c; }
+    el.innerHTML = 'Price ' + money(c, cur) + ' · stop ' + money(stop, cur) + ' (' + pct(stop / c - 1) + ') · risk ' + money(per, cur) + '/share<br><strong>' + sh + ' shares</strong> ≈ ' + money(cost, cur) + ' (' + (cost / acct * 100).toFixed(1) + '% of account), losing about ' + money(sh * per, cur) + ' if the stop is hit without a gap.';
+  }
+
+  function loadTicker(s) {
+    sym = s; T = DB.tickers[s]; I = computeAll(T);
+    var slider = $('mr-asof'); var last = T.d.length - 1;
+    slider.min = String(Math.min(last, 60)); slider.max = String(last); slider.value = String(last);
+    render();
+  }
+
+  function initReader() {
+    fetch('data/prices.json', { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (db) {
+      DB = db;
+      var sel = $('mr-ticker');
+      sel.innerHTML = Object.keys(db.tickers).map(function (k) { return '<option value="' + k + '">' + db.tickers[k].name + ' (' + k + ')</option>'; }).join('');
+      sel.value = db.tickers.NVDA ? 'NVDA' : Object.keys(db.tickers)[0];
+      $('mr-updated').textContent = 'Prices updated ' + db.updated;
+      if (!buildCharts()) return;
+      loadTicker(sel.value);
+      sel.addEventListener('change', function () { loadTicker(sel.value); });
+      $('mr-asof').addEventListener('input', render);
+      $('mr-rule').addEventListener('change', render);
+      $('mr-markers').addEventListener('change', render);
+      ['ps-account', 'ps-risk', 'ps-stop'].forEach(function (id) { $(id).addEventListener('input', function () { renderSizing(+$('mr-asof').value); }); $(id).addEventListener('change', function () { renderSizing(+$('mr-asof').value); }); });
+      try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme); } catch (e) {}
+    }).catch(function () {
+      $('mr-msg').textContent = 'Couldn’t load price data. Reload the page to try again.';
+    });
+  }
+
+  /* ---------------- news simulator ---------------- */
+  var SIZE = { mega: { react: 0.85, fade: 0.8, label: 'mega cap' }, large: { react: 1.0, fade: 1.0, label: 'large cap' }, mid: { react: 1.3, fade: 1.2, label: 'mid cap' }, small: { react: 1.75, fade: 1.45, label: 'small cap or 2× fund' } };
+  var PRESETS = {
+    sellnews: { implied: 9, results: 1, guide: 0, runup: 30, size: 'mega', mood: 0 },
+    lowbar: { implied: 9, results: 2, guide: 1, runup: -12, size: 'large', mood: 0 },
+    guideup: { implied: 9, results: -1, guide: 2, runup: 0, size: 'large', mood: 0 },
+    hype: { implied: 18, results: 1, guide: 0, runup: 35, size: 'small', mood: 1 }
+  };
+  function simulate() {
+    var Iv = +$('sim-implied').value, R = +$('sim-results').value, G = +$('sim-guide').value, U = +$('sim-runup').value, sz = SIZE[$('sim-size').value], M = +$('sim-mood').value;
+    $('sim-implied-v').textContent = '±' + Iv + '%';
+    $('sim-runup-v').textContent = (U > 0 ? '+' : '') + U + '%';
+    var S = 0.45 * R + 0.55 * G;
+    var C = Math.max(-0.5, Math.min(1, U / 40)) * 0.8;
+    var N = S - C;
+    var d1 = Iv * 1.1 * Math.tanh(N / 1.1) * sz.react + M * 0.15 * Iv;
+    d1 = Math.max(-2.2 * Iv, Math.min(2.2 * Iv, d1));
+    var band = 0.35 * Iv * sz.react;
+    var mode, drift;
+    if (G !== 0 && Math.sign(G) === Math.sign(d1) && Math.abs(G) >= 1) { mode = 'follow'; drift = 0.35 * d1; }
+    else if ((Math.sign(d1) !== Math.sign(S) && Math.abs(d1) > 0.5) || (Math.abs(S) < 0.6 && Math.abs(d1) > 0.3 * Iv)) { mode = 'fade'; drift = -0.45 * d1 * sz.fade; }
+    else { mode = 'settle'; drift = -0.15 * d1; }
+    var path = [0, d1];
+    for (var k = 2; k <= 10; k++) { var t = (k - 1) / 9, e = 1 - Math.pow(1 - t, 2); path.push(d1 + drift * e); }
+    var d10 = path[10];
+
+    function sgn(x) { return (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toFixed(1) + '%'; }
+    var d1el = $('sim-d1'); d1el.textContent = sgn(d1); d1el.className = 'val ' + (d1 >= 0 ? 'pos' : 'neg');
+    $('sim-range').textContent = sgn(d1 - band) + ' to ' + sgn(d1 + band);
+    var d10el = $('sim-d10'); d10el.textContent = sgn(d10); d10el.className = 'val ' + (d10 >= 0 ? 'pos' : 'neg');
+
+    // SVG
+    var w = 600, h = 260, padL = 44, padR = 16, padT = 16, padB = 30;
+    var maxAbs = Math.max(Iv * 1.15, Math.abs(d1) + band * 1.6, Math.abs(d10) + band * 2);
+    maxAbs = Math.ceil(maxAbs / 5) * 5;
+    var x = function (k) { return padL + (w - padL - padR) * k / 10; };
+    var y = function (v) { return padT + (h - padT - padB) * (1 - (v + maxAbs) / (2 * maxAbs)); };
+    var s = '';
+    [-maxAbs, -maxAbs / 2, maxAbs / 2, maxAbs].forEach(function (g) { s += '<line class="grid" x1="' + padL + '" x2="' + (w - padR) + '" y1="' + y(g) + '" y2="' + y(g) + '"/><text x="' + (padL - 6) + '" y="' + (y(g) + 4) + '" text-anchor="end">' + (g > 0 ? '+' : '') + g + '%</text>'; });
+    s += '<line class="zero" x1="' + padL + '" x2="' + (w - padR) + '" y1="' + y(0) + '" y2="' + y(0) + '"/><text x="' + (padL - 6) + '" y="' + (y(0) + 4) + '" text-anchor="end">0%</text>';
+    s += '<line class="imp" x1="' + padL + '" x2="' + (w - padR) + '" y1="' + y(Iv) + '" y2="' + y(Iv) + '"/><line class="imp" x1="' + padL + '" x2="' + (w - padR) + '" y1="' + y(-Iv) + '" y2="' + y(-Iv) + '"/>';
+    s += '<text x="' + (w - padR) + '" y="' + (y(Iv) - 5) + '" text-anchor="end">implied +' + Iv + '%</text>';
+    var top = [], bot = [];
+    for (var k2 = 1; k2 <= 10; k2++) { var bw = band * (1 + 0.12 * (k2 - 1)); top.push(x(k2) + ',' + y(path[k2] + bw)); bot.unshift(x(k2) + ',' + y(path[k2] - bw)); }
+    s += '<polygon class="band" points="' + top.concat(bot).join(' ') + '"/>';
+    s += '<polyline class="path" points="' + path.map(function (v, k3) { return x(k3) + ',' + y(v); }).join(' ') + '"/>';
+    [0, 1, 10].forEach(function (k4) { s += '<circle class="pt" r="5" cx="' + x(k4) + '" cy="' + y(path[k4]) + '"/>'; });
+    for (var k5 = 0; k5 <= 10; k5 += (k5 === 0 ? 1 : (k5 === 1 ? 4 : 5))) { s += '<text x="' + x(k5) + '" y="' + (h - 8) + '" text-anchor="' + (k5 === 10 ? 'end' : k5 === 0 ? 'start' : 'middle') + '">' + (k5 === 0 ? 'Before' : 'Day ' + k5) + '</text>'; }
+    $('sim-svg').innerHTML = s;
+
+    // explanation
+    var ex = [];
+    var resWords = ['a big miss', 'a miss', 'in line with what was priced in', 'a beat', 'a big beat'][R + 2];
+    var guideWords = ['cut sharply', 'below hopes', 'in line', 'above hopes', 'raised sharply'][G + 2];
+    ex.push('Results were ' + resWords + ' and guidance was ' + guideWords + '. Guidance carries more weight because it changes what the company is expected to earn next.');
+    if (U >= 15) ex.push('The stock rose ' + U + '% into the news, so much of the good outcome was already in the price and many holders were ready to sell. That raises the bar for a positive reaction.');
+    else if (U <= -5) ex.push('The stock fell ' + Math.abs(U) + '% into the news, so expectations were low. Even decent news can lift it as sellers run out.');
+    else ex.push('The stock was fairly flat into the news, so the reaction mostly reflects the surprise itself.');
+    ex.push('As a ' + sz.label + ', its reaction is scaled ' + (sz.react < 1 ? 'down: deep trading absorbs news.' : sz.react > 1.2 ? 'up: thinner trading means bigger overshoots both ways.' : 'about normally.'));
+    if (Math.abs(d1) > Iv) ex.push('The model’s move is bigger than the ±' + Iv + '% the options market priced. That only happens with a real surprise; most reports land inside the implied move.');
+    else ex.push('The move stays inside the ±' + Iv + '% options-implied range, as most reports do.');
+    if (mode === 'follow') ex.push('Because guidance points the same way as the first move, the model lets it keep drifting. Analysts revise forecasts over the following days, and that tends to extend the move.');
+    else if (mode === 'fade') ex.push('The first move isn’t backed by a change in the outlook, so the model fades it. Moves driven by positioning and excitement often give much of it back within days.');
+    else ex.push('The model lets the first move settle with a small give-back as traders take profits and the news is digested.');
+    if (M !== 0) ex.push('Market mood ' + (M > 0 ? 'adds a tailwind: buyers are eager everywhere.' : 'adds a headwind: in broad selling, even good news struggles.'));
+    $('sim-explain').innerHTML = ex.map(function (t) { return '<li>' + t + '</li>'; }).join('');
+  }
+  function initSim() {
+    ['sim-implied', 'sim-results', 'sim-guide', 'sim-runup', 'sim-size', 'sim-mood'].forEach(function (id) { $(id).addEventListener('input', simulate); $(id).addEventListener('change', simulate); });
+    document.querySelectorAll('[data-preset]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var p = PRESETS[b.getAttribute('data-preset')];
+        $('sim-implied').value = p.implied; $('sim-results').value = String(p.results); $('sim-guide').value = String(p.guide);
+        $('sim-runup').value = p.runup; $('sim-size').value = p.size; $('sim-mood').value = String(p.mood);
+        simulate();
+      });
+    });
+    simulate();
+  }
+
+  /* ---------------- exit plan ---------------- */
+  var PLAN_IDS = ['pl-ticker', 'pl-shares', 'pl-cost', 'pl-price', 'pl-target', 'pl-stop', 'pl-time', 'pl-account', 'pl-why', 'pl-event', 'pl-gapup', 'pl-gapdown'];
+  var DEFAULTS = {};
+  function planCalc() {
+    var v = function (id) { return $(id).value; }, n = function (id) { return parseFloat($(id).value); };
+    var sh = n('pl-shares'), cost = n('pl-cost'), px = n('pl-price'), tg = n('pl-target'), st = n('pl-stop'), acct = n('pl-account');
+    var risk = sh * (px - st), reward = sh * (tg - px), rr = reward / risk;
+    function set(id, txt, cls) { var el = $(id); el.textContent = txt; el.className = 'val' + (cls ? ' ' + cls : ''); }
+    var ok = sh > 0 && px > 0 && tg > px && st < px && st > 0;
+    set('pl-risk', ok ? '$' + risk.toFixed(0) : '—', 'neg');
+    set('pl-reward', ok ? '$' + reward.toFixed(0) : '—', 'pos');
+    set('pl-rr', ok ? rr.toFixed(1) + ' : 1' : '—', ok ? (rr >= 2 ? 'pos' : rr < 1 ? 'neg' : '') : '');
+    var lines = [];
+    var tk = (v('pl-ticker') || 'This stock').trim();
+    lines.push('EXIT PLAN · ' + tk);
+    lines.push('');
+    lines.push('Why I own it: ' + (v('pl-why').trim() || '(write one sentence)'));
+    if (sh > 0 && px > 0) lines.push('Position: ' + sh + ' shares, worth about $' + (sh * px).toFixed(0) + (cost > 0 ? ' (cost $' + (sh * cost).toFixed(0) + ', ' + ((px / cost - 1) * 100).toFixed(1) + '% so far)' : '') + (acct > 0 ? ', ' + (sh * px / acct * 100).toFixed(1) + '% of my account' : '') + '.');
+    if (!ok) lines.push('⚠ Set a take-profit above today’s price and a get-out price below it.');
+    else {
+      lines.push('Take profit at $' + tg + ' (+' + ((tg / px - 1) * 100).toFixed(1) + '%): gain about $' + reward.toFixed(0) + '.');
+      lines.push('Get out at $' + st + ' (' + ((st / px - 1) * 100).toFixed(1) + '%): lose about $' + risk.toFixed(0) + ', if there’s no gap.');
+      lines.push('Reward vs. risk: ' + rr.toFixed(1) + ' to 1' + (rr < 1 ? ' — I’m risking more than I hope to gain.' : '.'));
+    }
+    if (v('pl-time')) lines.push('If neither happens by ' + v('pl-time') + ', I re-check the reason and decide fresh, as if I didn’t own it.');
+    if (v('pl-event').trim()) lines.push('Event: ' + v('pl-event').trim() + '. Prices can gap past both levels overnight.');
+    lines.push('If it gaps up past my target: ' + v('pl-gapup') + '.');
+    lines.push('If it gaps down past my get-out price: ' + v('pl-gapdown') + '.');
+    lines.push('');
+    lines.push('Rules for me: use limit orders. Don’t move the get-out price lower once set. A tip from someone else is not a reason to change this plan.');
+    $('pl-text').textContent = lines.join('\n');
+    try { var save = {}; PLAN_IDS.forEach(function (id) { save[id] = $(id).value; }); localStorage.setItem('mn-exit-plan', JSON.stringify(save)); } catch (e) {}
+  }
+  function initPlan() {
+    PLAN_IDS.forEach(function (id) { DEFAULTS[id] = $(id).value; });
+    try { var saved = JSON.parse(localStorage.getItem('mn-exit-plan') || 'null'); if (saved) PLAN_IDS.forEach(function (id) { if (saved[id] != null) $(id).value = saved[id]; }); } catch (e) {}
+    PLAN_IDS.forEach(function (id) { $(id).addEventListener('input', planCalc); $(id).addEventListener('change', planCalc); });
+    $('plan-form').addEventListener('submit', function (e) { e.preventDefault(); });
+    $('pl-reset').addEventListener('click', function () { PLAN_IDS.forEach(function (id) { $(id).value = DEFAULTS[id]; }); planCalc(); });
+    $('pl-copy').addEventListener('click', function () {
+      var el = $('pl-text'), btn = $('pl-copy');
+      function done(t) { btn.textContent = t; setTimeout(function () { btn.textContent = 'Copy plan'; }, 1600); }
+      function fallback() { try { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); done('Selected'); } catch (e) { done('Copy failed'); } }
+      try { navigator.clipboard.writeText(el.textContent).then(function () { done('Copied'); }, fallback); } catch (e) { fallback(); }
+    });
+    planCalc();
+  }
+
+  initSim();
+  initPlan();
+  initReader();
+})();
+</script>
+
+</body>
+</html>
